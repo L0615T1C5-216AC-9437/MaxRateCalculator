@@ -66,7 +66,7 @@ public class calculateMax extends mrc.calculation {
                 //drills
                 if (t.block() instanceof Drill d && t.build instanceof Drill.DrillBuild db) {
                     if (db.dominantItems > 0) {
-                        float perSecond = db.dominantItems * (db.liquids.total() > 0 ? d.liquidBoostIntensity * d.liquidBoostIntensity : 1f);
+                        float perSecond = db.dominantItems * d.liquidBoostIntensity * d.liquidBoostIntensity;
                         float difficulty = d.drillTime + d.hardnessDrillMultiplier * db.dominantItem.hardness;
                         float rate = perSecond / difficulty;
 
