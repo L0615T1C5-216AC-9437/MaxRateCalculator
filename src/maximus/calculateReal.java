@@ -5,6 +5,7 @@ import arc.util.Log;
 import arc.util.Nullable;
 import mindustry.Vars;
 import mindustry.gen.Building;
+import mindustry.gen.Iconc;
 import mindustry.type.Category;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
@@ -12,10 +13,7 @@ import mindustry.type.Liquid;
 import mindustry.world.Tile;
 import mindustry.world.blocks.defense.MendProjector;
 import mindustry.world.blocks.defense.OverdriveProjector;
-import mindustry.world.blocks.power.ImpactReactor;
-import mindustry.world.blocks.power.ItemLiquidGenerator;
-import mindustry.world.blocks.power.NuclearReactor;
-import mindustry.world.blocks.power.PowerGenerator;
+import mindustry.world.blocks.power.*;
 import mindustry.world.blocks.production.*;
 import mindustry.world.consumers.ConsumeItems;
 import mindustry.world.consumers.ConsumeLiquid;
@@ -23,15 +21,18 @@ import mindustry.world.consumers.ConsumePower;
 import mindustry.world.consumers.ConsumeType;
 
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import static mindustry.Vars.world;
 
 public class calculateReal extends mrc.calculation {
     private final ArrayList<pc> apc = new ArrayList<>();
-    private final ArrayList<Object> intermediate = new ArrayList<>();
+    private Item bestFlammableFuel = null;
+    private Item bestRadioactiveFuel = null;
     //
-    private static final String label = "Real Ratios\n[lightgray]%[gray]: [lightgray]% of total capacity in use\n[orange]=========================[white]";
+    private static final String label = "Real Ratios\n[lightgray]%[gray]: [lightgray]% of total production capacity \n[orange]=========================[white]";
     //old
     public final HashMap<Item, List<pcEntry>> itemPC ;
 
@@ -122,7 +123,13 @@ public class calculateReal extends mrc.calculation {
                     }
                 }
                 //power
-                if (t.block() instanceof ItemLiquidGenerator ilg) {
+                if (t.block() instanceof BurnerGenerator bg) {
+                    pc.usesFlammableItem = true;
+                    pc.rate = 60f / bg.itemDuration;
+                } else if (t.block() instanceof DecayGenerator dg) {
+                    pc.usesRadioactiveItem = true;
+                    pc.rate = 60f / dg.itemDuration;
+                } else if (t.block() instanceof ItemLiquidGenerator ilg) {
                     if (ilg.consumes.has(ConsumeType.item) && ilg.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
                         pc.materials = IStoItems(ci.items);
                         pc.rate = 60f/ ilg.itemDuration;
@@ -198,8 +205,10 @@ public class calculateReal extends mrc.calculation {
         normalizeRates();
 
         HashMap<Object, finalAverages> isd = new HashMap<>();
-        float maxPowerAverageP = 0;
-        float maxPowerAverageN = 0;
+        float powerAverageP = 0f;
+        float powerAverageN = 0f;
+        float powerEfficiencies = 0f;
+        int powerProducers = 0;
 
         for (pc pc : apc) {
             if (pc.products != null) for (items is : pc.products) {
@@ -224,8 +233,13 @@ public class calculateReal extends mrc.calculation {
                 isd.putIfAbsent(pc.liquidUsage, new finalAverages());
                 isd.get(pc.liquidUsage).consumption += (pc.liquidUsageRate * pc.efficiency);
             }
-            maxPowerAverageP += pc.powerProduction * pc.efficiency;
-            maxPowerAverageN -= pc.powerConsumption * pc.efficiency;
+
+            if (pc.powerProduction > 0) {
+                powerEfficiencies += pc.efficiency;
+                powerProducers++;
+            }
+            powerAverageP += pc.powerProduction * pc.efficiency;
+            powerAverageN -= pc.powerConsumption * pc.efficiency;
         }
 
         itemPC.forEach((k, v) -> {
@@ -262,9 +276,12 @@ public class calculateReal extends mrc.calculation {
             if (averages.production > 0 && averages.consumption > 0) builder.append(" [white]= [lime]+").append(df.format(averages.production)).append(" [white]+ [scarlet]-").append(df.format(averages.consumption));
             if (averages.consumptionOptional > 0) builder.append(" [lightgray](-").append(df.format(averages.consumptionOptional)).append(" Optional)");
         }
-        if (maxPowerAverageP > 0 || maxPowerAverageN < 0) {
-            builder.append("\n[yellow]Power [white]: ").append(maxPowerAverageP + maxPowerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(maxPowerAverageP + maxPowerAverageN));
-            if (maxPowerAverageP > 0 && maxPowerAverageN < 0) builder.append(" [white]= [lime]+").append(df.format(maxPowerAverageP)).append(" [white]").append(maxPowerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(maxPowerAverageN));
+        if (powerAverageP > 0) {
+            builder.append("\n[white]([lightgray]").append(df.format((powerEfficiencies / powerProducers) * 100f)).append("%[white]) ").append(Iconc.power).append("[yellow]Power Generation : [lime]+").append(powerAverageP);
+        }
+        if (powerAverageP > 0 || powerAverageN < 0) {
+            builder.append("\n[yellow]Power [white]: ").append(powerAverageP + powerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(powerAverageP + powerAverageN));
+            if (powerAverageP > 0 && powerAverageN < 0) builder.append(" [white]= [lime]+").append(df.format(powerAverageP)).append(" [white]").append(powerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(powerAverageN));
         }
 
         if (!builder.toString().equals(label)) formattedMessage = builder.toString();
@@ -308,20 +325,19 @@ public class calculateReal extends mrc.calculation {
         public items[] materials;
         @Nullable
         public items[] products;
-        @Nullable
         public float rate;
+
         @Nullable
         public Liquid liquidUsage;
-        @Nullable
         public float liquidUsageRate;
         @Nullable
         public Liquid liquidProduct;
-        @Nullable
         public float liquidProductionRate;
 
-        @Nullable
+        public boolean usesFlammableItem;
+        public boolean usesRadioactiveItem;
+
         public float powerConsumption;
-        @Nullable
         public float powerProduction;
 
         public float efficiency = 1f;
@@ -441,6 +457,8 @@ public class calculateReal extends mrc.calculation {
 
     private HashMap<Object, sd> getSD() {
         HashMap<Object, sd> isd = new HashMap<>();
+        float flammableFuelDemand = 0f;
+        float radioactiveFuelDemand = 0f;
         for (pc pc : apc) {
             if (pc.products != null) for (items is : pc.products) {
                 isd.putIfAbsent(is.item, new sd());
@@ -458,14 +476,59 @@ public class calculateReal extends mrc.calculation {
                 isd.putIfAbsent(pc.liquidUsage, new sd());
                 isd.get(pc.liquidUsage).demand += (pc.liquidUsageRate * pc.efficiency);
             }
+            if (pc.usesFlammableItem && pc.materials == null) {
+                flammableFuelDemand += (pc.rate * pc.efficiency);
+            }
+            if (pc.usesRadioactiveItem && pc.materials == null) {
+                radioactiveFuelDemand += (pc.rate * pc.efficiency);
+            }
         }
-
-        if (intermediate.isEmpty()) {
-            isd.forEach((item, sd) -> {
-                if (sd.supply != 0 && sd.demand != 0) {
-                    intermediate.add(item);
+        //
+        if (flammableFuelDemand > 0f && bestFlammableFuel == null) {
+            float bestFlammability = -1;
+            Item bestFlammable = null;
+            for (Object o : isd.keySet()) { //will assume items being used for production can be used as fuel
+                if (o instanceof Item item) {
+                    if (item.flammability > 0f && item.flammability > bestFlammability && item.explosiveness < 0.5f) { //explosiveness over 0.5f can cause turbine damage depending on settings
+                        bestFlammable = item;
+                        bestFlammability = item.flammability;
+                    }
                 }
-            });
+            }
+            bestFlammableFuel = bestFlammable;
+        }
+        if (flammableFuelDemand > 0f && bestFlammableFuel != null) {
+            isd.putIfAbsent(bestFlammableFuel, new sd());
+            isd.get(bestFlammableFuel).demand += flammableFuelDemand;
+
+            for (pc pc : apc) {
+                if (pc.usesFlammableItem) {
+                    pc.materials = new items[] { new items(bestFlammableFuel, 1) };
+                }
+            }
+        }
+        if (radioactiveFuelDemand > 0f && bestRadioactiveFuel == null) {
+            float bestRadioactivity = -1;
+            Item bestRadioactive = null;
+            for (Object o : isd.keySet()) {
+                if (o instanceof Item item) {
+                    if (item.radioactivity > 0f && item.radioactivity > bestRadioactivity) { //explosiveness over 0.5f can cause turbine damage depending on settings
+                        bestRadioactive = item;
+                        bestRadioactivity = item.radioactivity;
+                    }
+                }
+            }
+            bestRadioactiveFuel = bestRadioactive;
+        }
+        if (radioactiveFuelDemand > 0f && bestRadioactiveFuel != null) {
+            isd.putIfAbsent(bestRadioactiveFuel, new sd());
+            isd.get(bestRadioactiveFuel).demand += radioactiveFuelDemand;
+
+            for (pc pc : apc) {
+                if (pc.usesRadioactiveItem) {
+                    pc.materials = new items[] { new items(bestRadioactiveFuel, 1) };
+                }
+            }
         }
 
         return isd;
