@@ -54,131 +54,108 @@ public class calculateMax extends mrc.calculation {
                     continue;
                 }
                 if (repeat.contains(t.build)) continue;
-                if (t.block() != null) {
-                    if (t.block().consumes.has(ConsumeType.power) && t.block().consumes.get(ConsumeType.power) instanceof ConsumePower cp) {
-                        powerConsumption(cp.usage);
-                    }
-                    if (t.block().consumes.has(ConsumeType.liquid) && t.block().consumes.get(ConsumeType.liquid) instanceof ConsumeLiquid cl) {
-                        liquidConsumption(cl.liquid, cl.amount);
+                //generic
+                if (t.block().consumes.has(ConsumeType.power) && t.block().consumes.get(ConsumeType.power) instanceof ConsumePower cp) {
+                    powerConsumption(cp.usage);
+                }
+                if (t.block().consumes.has(ConsumeType.liquid) && t.block().consumes.get(ConsumeType.liquid) instanceof ConsumeLiquid cl) {
+                    liquidConsumption(cl.liquid, cl.amount);
+                }
+                //drills
+                if (t.block() instanceof Drill d && t.build instanceof Drill.DrillBuild db) {
+                    if (db.dominantItems > 0) {
+                        float perSecond = db.dominantItems * (db.liquids.total() > 0 ? d.liquidBoostIntensity * d.liquidBoostIntensity : 1f);
+                        float difficulty = d.drillTime + d.hardnessDrillMultiplier * db.dominantItem.hardness;
+                        float rate = perSecond / difficulty;
+
+                        itemPC.putIfAbsent(db.dominantItem, new ArrayList<>());
+                        itemPC.get(db.dominantItem).add(new pcEntry(rate * 60f, 0, false));
                     }
                 }
-                switch (category) {
-                    case production -> {
-                        if (t.block() instanceof Drill d && t.build instanceof Drill.DrillBuild db) {
-                            if (db.dominantItems > 0) {
-                                float perSecond = db.dominantItems * (db.liquids.total() > 0 ? d.liquidBoostIntensity * d.liquidBoostIntensity : 1f);
-                                float difficulty = d.drillTime + d.hardnessDrillMultiplier * db.dominantItem.hardness;
-                                float rate = perSecond / difficulty;
-
-                                itemPC.putIfAbsent(db.dominantItem, new ArrayList<>());
-                                itemPC.get(db.dominantItem).add(new pcEntry(rate * 60f, 0, false));
+                if (t.block() instanceof Fracker fracker) {
+                    if (fracker.consumes.has(ConsumeType.item) && fracker.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, fracker.itemUseTime);
+                    }
+                }
+                //liquids
+                if (t.block() instanceof SolidPump sp && t.build instanceof SolidPump.SolidPumpBuild spb) {
+                    float fraction = Math.max(spb.validTiles + spb.boost + (sp.attribute == null ? 0 : sp.attribute.env()), 0);
+                    float maxPump = sp.pumpAmount * fraction;
+                    liquidProduction(sp.result, maxPump);
+                } else if (t.block() instanceof Pump pump) {
+                    float pumpSpeed = 0;
+                    Liquid liquid = null;
+                    if (pump.isMultiblock()) {
+                        int tiles = 0;
+                        for(Tile other : t.build.tile().getLinkedTilesAs(pump, new Seq<>())) { //t.build.tile to make sure we are on the parent tile (cus getLinked is bad)
+                            if(other.floor().liquidDrop == null) continue;
+                            if(other.floor().liquidDrop != liquid && liquid != null) {
+                                liquid = null;
+                                tiles = -1;
+                                break;
                             }
+                            liquid = other.floor().liquidDrop;
+                            tiles++;
+                        }
+                        if (tiles > 0 && liquid != null) {
+                            pumpSpeed = pump.pumpAmount * tiles;
+                        }
+                    } else if (t.floor().liquidDrop != null) {
+                        liquid = t.floor().liquidDrop;
+                        pumpSpeed = pump.pumpAmount;
+                    }
+
+                    if (liquid != null && pumpSpeed > 0) {
+                        liquidProduction(liquid, pumpSpeed);
+                    }
+                }
+                //power
+                if (t.block() instanceof ItemLiquidGenerator ilg) {
+                    if (ilg.consumes.has(ConsumeType.item) && ilg.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, ilg.itemDuration);
+                    }
+                } else if (t.block() instanceof NuclearReactor nr) {
+                    if (nr.consumes.has(ConsumeType.item) && nr.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, nr.itemDuration);
+                    }
+                } else if (t.block() instanceof ImpactReactor ir) {
+                    if (ir.consumes.has(ConsumeType.item) && ir.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, ir.itemDuration);
+                    }
+                }
+                if (t.block() instanceof PowerGenerator pg) {
+                    powerProduction(pg.powerProduction);
+                }
+                //crafting
+                if (t.block() instanceof GenericCrafter gc) {
+                    if (gc.outputItems != null) {
+                        itemProduction(gc.outputItems, gc.craftTime);
+                    }
+                    if (gc.outputLiquid != null) {
+                        if (t.block() instanceof LiquidConverter) {
+                            liquidProduction(gc.outputLiquid.liquid, gc.outputLiquid.amount);
                         } else {
-                            if (t.block() instanceof Fracker fracker) {
-                                if (fracker.consumes.has(ConsumeType.item) && fracker.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                    itemConsumption(ci.items, fracker.itemUseTime);
-                                }
-                            }
-                            if (t.block() instanceof SolidPump sp && t.build instanceof SolidPump.SolidPumpBuild spb) {
-                                float fraction = Math.max(spb.validTiles + spb.boost + (sp.attribute == null ? 0 : sp.attribute.env()), 0);
-                                float maxPump = sp.pumpAmount * fraction;
-                                liquidProduction(sp.result, maxPump);
-                            }
+                            liquidProduction(gc.outputLiquid.liquid, gc.outputLiquid.amount / gc.craftTime);
                         }
                     }
-                    case liquid -> {
-                        if (t.block() instanceof SolidPump sp && t.build instanceof SolidPump.SolidPumpBuild spb) {
-                            float fraction = Math.max(spb.validTiles + spb.boost + (sp.attribute == null ? 0 : sp.attribute.env()), 0);
-                            float maxPump = sp.pumpAmount * fraction;
-                            liquidProduction(sp.result, maxPump);
-                        } else if (t.block() instanceof Pump pump) {
-                            float pumpSpeed = 0;
-                            Liquid liquid = null;
-                            if (pump.isMultiblock()) {
-                                int tiles = 0;
-                                for(Tile other : t.build.tile().getLinkedTilesAs(pump, new Seq<>())) { //t.build.tile to make sure we are on the parent tile (cus getLinked is bad)
-                                    if(other.floor().liquidDrop == null) continue;
-                                    if(other.floor().liquidDrop != liquid && liquid != null) {
-                                        liquid = null;
-                                        tiles = -1;
-                                        break;
-                                    }
-                                    liquid = other.floor().liquidDrop;
-                                    tiles++;
-                                }
-                                if (tiles > 0 && liquid != null) {
-                                    pumpSpeed = pump.pumpAmount * tiles;
-                                }
-                            } else if (t.floor().liquidDrop != null) {
-                                liquid = t.floor().liquidDrop;
-                                pumpSpeed = pump.pumpAmount;
-                            }
+                    if (gc.consumes.has(ConsumeType.item) && gc.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, gc.craftTime);
+                    }
+                } if (t.block() instanceof Separator separator) {
+                    int totalSlots = 0; //how many slots for random selection
+                    HashMap<Item, Integer> chances = new HashMap<>(); //how many slots a item has
+                    for (ItemStack is : separator.results) {
+                        totalSlots += is.amount;
+                        chances.put(is.item, is.amount);
+                    }
+                    for (Item item : chances.keySet()) {
+                        float selectionChance = (float) chances.get(item) / totalSlots;// if 1.0, it will make x item every crafting cycle, if 0.5 it'll be every other cycle... so on and so forth
 
-                            if (liquid != null && pumpSpeed > 0) {
-                                liquidProduction(liquid, pumpSpeed);
-                            }
-                        }
-                    }
-                    case power -> {
-                        if (t.block() instanceof ItemLiquidGenerator ilg) {
-                            if (ilg.consumes.has(ConsumeType.item) && ilg.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, ilg.itemDuration);
-                            }
-                        } else if (t.block() instanceof NuclearReactor nr) {
-                            if (nr.consumes.has(ConsumeType.item) && nr.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, nr.itemDuration);
-                            }
-                        } else if (t.block() instanceof ImpactReactor ir) {
-                            if (ir.consumes.has(ConsumeType.item) && ir.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, ir.itemDuration);
-                            }
-                        }
-                        if (t.block() instanceof PowerGenerator pg) {
-                            powerProduction(pg.powerProduction);
-                        }
-                    }
-                    case crafting -> {
-                        if (t.block() instanceof GenericCrafter gc) {
-                            if (gc.outputItems != null) {
-                                itemProduction(gc.outputItems, gc.craftTime);
-                            }
-                            if (gc.outputLiquid != null) {
-                                if (t.block() instanceof LiquidConverter) {
-                                    liquidProduction(gc.outputLiquid.liquid, gc.outputLiquid.amount);
-                                } else {
-                                    liquidProduction(gc.outputLiquid.liquid, gc.outputLiquid.amount / gc.craftTime);
-                                }
-                            }
-                            if (gc.consumes.has(ConsumeType.item) && gc.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, gc.craftTime);
-                            }
-                        } if (t.block() instanceof Separator separator) {
-                            int totalSlots = 0; //how many slots for random selection
-                            HashMap<Item, Integer> chances = new HashMap<>(); //how many slots a item has
-                            for (ItemStack is : separator.results) {
-                                totalSlots += is.amount;
-                                chances.put(is.item, is.amount);
-                            }
-                            for (Item item : chances.keySet()) {
-                                float selectionChance = (float) chances.get(item) / totalSlots;// if 1.0, it will make x item every crafting cycle, if 0.5 it'll be every other cycle... so on and so forth
-
-                                itemPC.putIfAbsent(item, new ArrayList<>());
-                                itemPC.get(item).add(new pcEntry(selectionChance / (separator.craftTime / 60f), 0, false));
-                            }
-                        }
-                    }
-                    case effect -> {
-                        if (t.block() instanceof OverdriveProjector op) {
-                            if (op.consumes.has(ConsumeType.item) && op.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, op.useTime, ci.optional);
-                            }
-                        } else if (t.block() instanceof MendProjector mp) {
-                            if (mp.consumes.has(ConsumeType.item) && mp.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, mp.useTime, ci.optional);
-                            }
-                        }
+                        itemPC.putIfAbsent(item, new ArrayList<>());
+                        itemPC.get(item).add(new pcEntry(selectionChance / (separator.craftTime / 60f), 0, false));
                     }
                 }
+                //misc
                 repeat.add(t.build);
             }
         }

@@ -56,153 +56,138 @@ public class calculateReal extends mrc.calculation {
                 }
                 if (repeat.contains(t.build)) continue;
                 pc pc = new pc();
-                if (t.block() != null) {
-                    if (t.block().consumes.has(ConsumeType.power) && t.block().consumes.get(ConsumeType.power) instanceof ConsumePower cp) {
-                        pc.powerConsumption = cp.usage * 60f;
-                    }
-                    if (t.block().consumes.has(ConsumeType.liquid) && t.block().consumes.get(ConsumeType.liquid) instanceof ConsumeLiquid cl) {
-                        pc.liquidUsage = cl.liquid;
-                        pc.liquidUsageRate = cl.amount * 60f;
+                //generic
+                if (t.block().consumes.has(ConsumeType.power) && t.block().consumes.get(ConsumeType.power) instanceof ConsumePower cp) {
+                    pc.powerConsumption = cp.usage * 60f;
+                }
+                if (t.block().consumes.has(ConsumeType.liquid) && t.block().consumes.get(ConsumeType.liquid) instanceof ConsumeLiquid cl) {
+                    pc.liquidUsage = cl.liquid;
+                    pc.liquidUsageRate = cl.amount * 60f;
+                }
+                //drills
+                if (t.block() instanceof Drill d && t.build instanceof Drill.DrillBuild db) {
+                    if (db.dominantItems > 0) {
+                        float boost = db.liquids.total() > 0 ? d.liquidBoostIntensity * d.liquidBoostIntensity : 1f;
+                        if (boost == 1f) {
+                            pc.liquidUsage = null;
+                            pc.liquidProductionRate = 0;
+                        }
+                        float perSecond = db.dominantItems * boost;
+                        float difficulty = d.drillTime + d.hardnessDrillMultiplier * db.dominantItem.hardness;
+                        float rate = perSecond / difficulty;
+
+                        pc.products = new items[] { new items(db.dominantItem, rate) };
+                        pc.rate = 60f;
                     }
                 }
+                if (t.block() instanceof Fracker fracker) {
+                    if (fracker.consumes.has(ConsumeType.item) && fracker.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        pc.materials = IStoItems(ci.items);
+                        pc.rate = 60f / fracker.itemUseTime;
 
-                switch (category) {
-                    case production -> {
-                        if (t.block() instanceof Drill d && t.build instanceof Drill.DrillBuild db) {
-                            if (db.dominantItems > 0) {
-                                float boost = db.liquids.total() > 0 ? d.liquidBoostIntensity * d.liquidBoostIntensity : 1f;
-                                if (boost == 1f) {
-                                    pc.liquidUsage = null;
-                                    pc.liquidProductionRate = 0;
-                                }
-                                float perSecond = db.dominantItems * boost;
-                                float difficulty = d.drillTime + d.hardnessDrillMultiplier * db.dominantItem.hardness;
-                                float rate = perSecond / difficulty;
+                    }
+                }
+                //liquids
+                if (t.block() instanceof SolidPump sp && t.build instanceof SolidPump.SolidPumpBuild spb) {
+                    float fraction = Math.max(spb.validTiles + spb.boost + (sp.attribute == null ? 0 : sp.attribute.env()), 0);
+                    float maxPump = sp.pumpAmount * fraction;
+                    pc.liquidProduct = sp.result;
+                    pc.liquidProductionRate = maxPump * 60f;
+                } else if (t.block() instanceof Pump pump) {
+                    float pumpRate = 0;
+                    Liquid liquid = null;
+                    if (pump.isMultiblock()) {
+                        int tiles = 0;
+                        for(Tile other : t.build.tile().getLinkedTilesAs(pump, new Seq<>())) { //t.build.tile to make sure we are on the parent tile (cus getLinked is bad)
+                            if(other.floor().liquidDrop == null) continue;
+                            if(other.floor().liquidDrop != liquid && liquid != null) {
+                                liquid = null;
+                                tiles = -1;
+                                break;
+                            }
+                            liquid = other.floor().liquidDrop;
+                            tiles++;
+                        }
+                        if (tiles > 0 && liquid != null) {
+                            pumpRate = pump.pumpAmount * tiles;
+                        }
+                    } else if (t.floor().liquidDrop != null) {
+                        liquid = t.floor().liquidDrop;
+                        pumpRate = pump.pumpAmount;
+                    }
 
-                                pc.products = new items[] { new items(db.dominantItem, rate) };
-                                pc.rate = 60f;
-                            }
-                        } else {
-                            if (t.block() instanceof Fracker fracker) {
-                                if (fracker.consumes.has(ConsumeType.item) && fracker.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                    pc.materials = IStoItems(ci.items);
-                                    pc.rate = 60f / fracker.itemUseTime;
-
-                                }
-                            }
-                            if (t.block() instanceof SolidPump sp && t.build instanceof SolidPump.SolidPumpBuild spb) {
-                                float fraction = Math.max(spb.validTiles + spb.boost + (sp.attribute == null ? 0 : sp.attribute.env()), 0);
-                                float maxPump = sp.pumpAmount * fraction;
-                                pc.liquidProduct = sp.result;
-                                pc.liquidProductionRate = maxPump * 60f;
-                            }
+                    if (liquid != null && pumpRate > 0) {
+                        pc.liquidProduct = liquid;
+                        pc.liquidProductionRate = pumpRate * 60f;
+                    }
+                }
+                //power
+                if (t.block() instanceof ItemLiquidGenerator ilg) {
+                    if (ilg.consumes.has(ConsumeType.item) && ilg.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        pc.materials = IStoItems(ci.items);
+                        pc.rate = 60f/ ilg.itemDuration;
+                    }
+                } else if (t.block() instanceof NuclearReactor nr) {
+                    if (nr.consumes.has(ConsumeType.item) && nr.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        pc.materials = IStoItems(ci.items);
+                        pc.rate = 60f/ nr.itemDuration;
+                    }
+                } else if (t.block() instanceof ImpactReactor ir) {
+                    if (ir.consumes.has(ConsumeType.item) && ir.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        pc.materials = IStoItems(ci.items);
+                        pc.rate = 60f/ ir.itemDuration;
+                    }
+                }
+                if (t.block() instanceof PowerGenerator pg) {
+                    pc.powerProduction = pg.powerProduction * 60f;
+                }
+                //crafting
+                if (t.block() instanceof GenericCrafter gc) {
+                    if (gc.outputItems != null) {
+                        pc.rate = 60f / gc.craftTime;
+                        pc.products = IStoItems(gc.outputItems);
+                    }
+                    if (gc.outputLiquid != null) {
+                        pc.liquidProduct = gc.outputLiquid.liquid;
+                        if (t.block() instanceof LiquidConverter) { //makes liquid per tick
+                            pc.liquidProductionRate = gc.outputLiquid.amount * 60f;
+                        } else { //per craft
+                            pc.liquidProductionRate = gc.outputLiquid.amount / (60f / gc.craftTime);
                         }
                     }
-                    case liquid -> {
-                        if (t.block() instanceof SolidPump sp && t.build instanceof SolidPump.SolidPumpBuild spb) {
-                            float fraction = Math.max(spb.validTiles + spb.boost + (sp.attribute == null ? 0 : sp.attribute.env()), 0);
-                            float maxPump = sp.pumpAmount * fraction;
-                            pc.liquidProduct = sp.result;
-                            pc.liquidProductionRate = maxPump * 60f;
-                        } else if (t.block() instanceof Pump pump) {
-                            float pumpRate = 0;
-                            Liquid liquid = null;
-                            if (pump.isMultiblock()) {
-                                int tiles = 0;
-                                for(Tile other : t.build.tile().getLinkedTilesAs(pump, new Seq<>())) { //t.build.tile to make sure we are on the parent tile (cus getLinked is bad)
-                                    if(other.floor().liquidDrop == null) continue;
-                                    if(other.floor().liquidDrop != liquid && liquid != null) {
-                                        liquid = null;
-                                        tiles = -1;
-                                        break;
-                                    }
-                                    liquid = other.floor().liquidDrop;
-                                    tiles++;
-                                }
-                                if (tiles > 0 && liquid != null) {
-                                    pumpRate = pump.pumpAmount * tiles;
-                                }
-                            } else if (t.floor().liquidDrop != null) {
-                                liquid = t.floor().liquidDrop;
-                                pumpRate = pump.pumpAmount;
-                            }
+                    if (gc.consumes.has(ConsumeType.item) && gc.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        pc.rate = 60f / gc.craftTime;
+                        pc.materials = IStoItems(ci.items);
+                    }
+                }
+                if (t.block() instanceof Separator separator) {
+                    int totalSlots = 0; //how many slots for random selection
+                    HashMap<Item, Integer> chances = new HashMap<>(); //how many slots a item has
+                    for (ItemStack is : separator.results) {
+                        totalSlots += is.amount;
+                        chances.put(is.item, is.amount);
+                    }
+                    items[] items = new items[chances.size()];
+                    int i = 0;
+                    for (Item item : chances.keySet()) {
+                        float selectionChance = (float) chances.get(item) / totalSlots;// if 1.0, it will make x item every crafting cycle, if 0.5 it'll be every other cycle... so on and so forth
+                        items[i++] = new items(item, selectionChance);
+                    }
+                    pc.rate = 60f / separator.craftTime;
+                    pc.products = items;
 
-                            if (liquid != null && pumpRate > 0) {
-                                pc.liquidProduct = liquid;
-                                pc.liquidProductionRate = pumpRate * 60f;
-                            }
-                        }
+                    if (separator.consumes.has(ConsumeType.item) && separator.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        pc.materials = IStoItems(ci.items);
                     }
-                    case power -> {
-                        if (t.block() instanceof ItemLiquidGenerator ilg) {
-                            if (ilg.consumes.has(ConsumeType.item) && ilg.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                pc.materials = IStoItems(ci.items);
-                                pc.rate = 60f/ ilg.itemDuration;
-                            }
-                        } else if (t.block() instanceof NuclearReactor nr) {
-                            if (nr.consumes.has(ConsumeType.item) && nr.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                pc.materials = IStoItems(ci.items);
-                                pc.rate = 60f/ nr.itemDuration;
-                            }
-                        } else if (t.block() instanceof ImpactReactor ir) {
-                            if (ir.consumes.has(ConsumeType.item) && ir.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                pc.materials = IStoItems(ci.items);
-                                pc.rate = 60f/ ir.itemDuration;
-                            }
-                        }
-                        if (t.block() instanceof PowerGenerator pg) {
-                            pc.powerProduction = pg.powerProduction * 60f;
-                        }
+                }
+                //misc.
+                if (t.block() instanceof OverdriveProjector op) {
+                    if (op.consumes.has(ConsumeType.item) && op.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, op.useTime, ci.optional);
                     }
-                    case crafting -> {
-                        if (t.block() instanceof GenericCrafter gc) {
-                            if (gc.outputItems != null) {
-                                pc.rate = 60f / gc.craftTime;
-                                pc.products = IStoItems(gc.outputItems);
-                            }
-                            if (gc.outputLiquid != null) {
-                                pc.liquidProduct = gc.outputLiquid.liquid;
-                                if (t.block() instanceof LiquidConverter) { //makes liquid per tick
-                                    pc.liquidProductionRate = gc.outputLiquid.amount * 60f;
-                                } else { //per craft
-                                    pc.liquidProductionRate = gc.outputLiquid.amount / (60f / gc.craftTime);
-                                }
-                            }
-                            if (gc.consumes.has(ConsumeType.item) && gc.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                pc.rate = 60f / gc.craftTime;
-                                pc.materials = IStoItems(ci.items);
-                            }
-                        } if (t.block() instanceof Separator separator) {
-                            int totalSlots = 0; //how many slots for random selection
-                            HashMap<Item, Integer> chances = new HashMap<>(); //how many slots a item has
-                            for (ItemStack is : separator.results) {
-                                totalSlots += is.amount;
-                                chances.put(is.item, is.amount);
-                            }
-                            items[] items = new items[chances.size()];
-                            int i = 0;
-                            for (Item item : chances.keySet()) {
-                                float selectionChance = (float) chances.get(item) / totalSlots;// if 1.0, it will make x item every crafting cycle, if 0.5 it'll be every other cycle... so on and so forth
-                                items[i++] = new items(item, selectionChance);
-                            }
-                            pc.rate = 60f / separator.craftTime;
-                            pc.products = items;
-
-                            if (separator.consumes.has(ConsumeType.item) && separator.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                pc.materials = IStoItems(ci.items);
-                            }
-                        }
-                    }
-                    case effect -> {
-                        if (t.block() instanceof OverdriveProjector op) {
-                            if (op.consumes.has(ConsumeType.item) && op.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, op.useTime, ci.optional);
-                            }
-                        } else if (t.block() instanceof MendProjector mp) {
-                            if (mp.consumes.has(ConsumeType.item) && mp.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                                itemConsumption(ci.items, mp.useTime, ci.optional);
-                            }
-                        }
+                } else if (t.block() instanceof MendProjector mp) {
+                    if (mp.consumes.has(ConsumeType.item) && mp.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, mp.useTime, ci.optional);
                     }
                 }
                 apc.add(pc);
