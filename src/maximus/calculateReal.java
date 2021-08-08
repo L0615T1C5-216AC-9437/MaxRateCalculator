@@ -152,7 +152,7 @@ public class calculateReal extends mrc.calculation {
                         if (t.block() instanceof LiquidConverter) { //makes liquid per tick
                             pc.liquidProductionRate = gc.outputLiquid.amount * 60f;
                         } else { //per craft
-                            pc.liquidProductionRate = gc.outputLiquid.amount / (60f / gc.craftTime);
+                            pc.liquidProductionRate = gc.outputLiquid.amount * (60f / gc.craftTime);
                         }
                     }
                     if (gc.consumes.has(ConsumeType.item) && gc.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
