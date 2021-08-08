@@ -1,0 +1,37 @@
+[![Github All Releases](https://img.shields.io/github/downloads/L0615T1C5-216AC-9437/MaxRateCalculator/total.svg)]()
+# Max Rate Calculator
+A plugin that allows you to calculate the efficiency, bottle neck and ratios of your machinations.
+*may or may not work with modded items / blocks*
+
+## Installation Guide
+1. Download the latest mod verion in [#Releases](https://github.com/L0615T1C5-216AC-9437/MaxRateCalculator/releases).
+2. Open mindustry, go to `mods` section, select `Open Folder`
+3. Move the mod (`Jar` file) into the folder
+4. Reopen mindustry.
+   If you get a welcome message, the mod was successfully installed
+
+## Usage
+The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This is done by pressing the [` ~] button in your keyboard and selecting a area as if you were making a schematic.
+1. Press [` ~] in your keyboard
+2. Move your mouse
+3. Select what type of calculation you want (Max Rate, Real Rate, etc.)
+4. Profit.
+
+## Building Your own .Jar
+
+1. Install JDK 16. If you don't know how, look it up.
+2. Open CMD/Terminal to the plugin directory. The one were the gradle.bat file is located
+3. Type and Run `gradlew jar` [2].
+4. Your mod jar will be in the `build/libs` directory.
+
+## Android?
+no.
+
+## Need Help?
+If you have any questions on how to run / build / use this mod you can contact me through discord.
+Discord: `L0615T1C4L.N16HTM4R3#6238` ( I respond to DM's)
+Discord-Server: [Chaotic-Neutral](http://cn-discord.ddns.net) (The one with Owner Role)
+
+--- 
+*[1]* *Acronym for Max Rate Calculator*
+*[2]* *On Linux/Mac it's `./gradlew`, but if you're using Linux I assume you know how to run executables properly anyway.*
