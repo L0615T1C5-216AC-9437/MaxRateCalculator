@@ -156,6 +156,15 @@ public class calculateMax extends mrc.calculation {
                     }
                 }
                 //misc
+                if (t.block() instanceof OverdriveProjector op) {
+                    if (op.consumes.has(ConsumeType.item) && op.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, op.useTime, ci.optional);
+                    }
+                } else if (t.block() instanceof MendProjector mp) {
+                    if (mp.consumes.has(ConsumeType.item) && mp.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        itemConsumption(ci.items, mp.useTime, ci.optional);
+                    }
+                }
                 repeat.add(t.build);
             }
         }
