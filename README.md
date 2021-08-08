@@ -3,6 +3,8 @@
 A plugin that allows you to calculate the efficiency, bottle neck and ratios of your machinations.  
 *may or may not work with modded items / blocks*
 
+![image](docs/MaxRatios1.png)
+![image](docs/RealRatios1.png)
 ## Installation Guide
 1. Download the latest mod verion in [#Releases](https://github.com/L0615T1C5-216AC-9437/MaxRateCalculator/releases).
 2. Open mindustry, go to `mods` section, select `Open Folder`
