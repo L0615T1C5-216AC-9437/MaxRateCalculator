@@ -31,6 +31,8 @@ public class calculateMax extends mrc.calculation {
     public final HashMap<Item, List<pcEntry>> itemPC ;
     public final HashMap<Liquid, List<pcEntry>> liquidPC;
     public final List<Float> powerPC;
+    //
+    private static final String label = "Max Ratios\n[orange]=========================[white]";
 
     public calculateMax(int x1, int y1, int x2, int y2) throws Exception {
         super(x1, y1, x2, y2);
@@ -224,7 +226,7 @@ public class calculateMax extends mrc.calculation {
                 ui.chatfrag.addMessage(t.block().category.name(), null);
                  */
         DecimalFormat df = new DecimalFormat("0000.00");
-        StringBuilder builder = new StringBuilder("Averages\n=========================");
+        StringBuilder builder = new StringBuilder(label);
         for (Item i : maxItemAverages.keySet()) {
             averages ia = maxItemAverages.get(i);
             if (ia != null) {
@@ -237,7 +239,7 @@ public class calculateMax extends mrc.calculation {
         for (Liquid l : maxLiquidAverages.keySet()) {
             averages ia = maxLiquidAverages.get(l);
             if (ia != null) {
-                builder.append("\n[#").append(l.color).append("]").append(l.name).append(" :");
+                builder.append("\n[white]").append(l.emoji()).append("[#").append(l.color).append("]").append(l.name).append(" :");
                 if (ia.production + ia.consumption != 0) builder.append(ia.production + ia.consumption < 0 ? " [scarlet]" : " [lime]+").append(df.format(ia.production + ia.consumption));
                 if (ia.production > 0 && ia.consumption < 0) builder.append(" [white]= [lime]+").append(df.format(ia.production)).append(" [white]+ [scarlet]").append(df.format(ia.consumption));
                 if (ia.consumptionOptional < 0) builder.append(" [lightgray](").append(df.format(ia.consumptionOptional)).append(" Optional)");
@@ -249,7 +251,7 @@ public class calculateMax extends mrc.calculation {
             if (maxPowerAverageN < 0) builder.append(" [white]").append(maxPowerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(maxPowerAverageN));
         }
 
-        if (!builder.toString().equals("Averages\n=========================")) formattedMessage = builder.toString();
+        if (!builder.toString().equals(label)) formattedMessage = builder.toString();
     }
 
 
