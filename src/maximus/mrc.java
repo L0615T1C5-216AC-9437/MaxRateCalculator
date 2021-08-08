@@ -8,6 +8,7 @@ import arc.graphics.g2d.Fill;
 import arc.graphics.g2d.Lines;
 import arc.input.KeyCode;
 import arc.util.Log;
+import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.content.Items;
 import mindustry.core.World;
@@ -91,13 +92,19 @@ public class mrc extends Mod {
                 y2 = -1;
             });
             if (!Core.settings.has("mrcFirstTime")) {
-                BaseDialog dialog = new BaseDialog("Welcome");
-                dialog.cont.add("To use the Max Rate Calculator, press the [` ~] key in your keyboard and drag as if you were making a schematic.").row();
-                dialog.cont.add("Anything inside the selection box will be counted in the calculation.").row();
-                dialog.cont.add("If you accidentally use the max rate calculator and a menu pops up, you can press [esc] to quit menu without triggering anything.").row();
-                dialog.cont.add("If you have any questions, you can contact me through discord. L0615T1C5.216AC#9437 or go to http://cn-discord.ddns.net and ping me (Server Owner)");
-                dialog.cont.button("Ok", dialog::hide).size(100f, 50f);
-                dialog.show();
+                Menus.infoMessage("""
+                        [accent]Thank you [white]for using the Max Rate Calculator
+
+                        To use the Max Rate Calculator, press the [lightgray][` ~][white] key in your keyboard and drag as if you were making a schematic.
+                        Anything inside the selection box will be counted in the calculation.
+
+                        If you accidentally use the max rate calculator and a menu pops up, you can press [lightgray][esc][white] to quit menu without triggering anything
+                        
+                        If you have any questions, you can contact me through [sky]discord[white], L0615T1C5.216AC#9437 or go to [lightgray]http://cn-discord.ddns.net[white] and ping me (Server Owner)
+                        
+                        [lightgray]This message will not appear again""");
+                Core.settings.put("mrcFirstTime", false);
+                Core.settings.forceSave();
             }
         });
         Events.run(EventType.Trigger.update, () -> {
