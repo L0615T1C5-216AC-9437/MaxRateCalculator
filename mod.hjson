@@ -1,3 +1,4 @@
+{
 name: "MaxRateCalculator"
 displayName: "Max Rate Calculator"
 author: "L0615T1C5.216AC#9437"
@@ -6,3 +7,4 @@ description: "Calculate the rates and ratios of your machinations!"
 version: 1.1
 minGameVersion: 129
 hidden: true
+}
