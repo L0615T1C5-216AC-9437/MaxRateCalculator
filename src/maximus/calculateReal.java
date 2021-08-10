@@ -396,7 +396,6 @@ public class calculateReal extends mrc.calculation {
                                 if (pc.materials != null) {
                                     for (items is : pc.materials) {
                                         if (is.item == maximum) {
-                                            float p = pc.efficiency;
                                             pc.efficiency *= max;
                                         }
                                     }
@@ -406,7 +405,6 @@ public class calculateReal extends mrc.calculation {
                             for (pc pc : apc) {
                                 if (pc.liquidUsage != null) {
                                     if (pc.liquidUsage == maximum) {
-                                        float p = pc.efficiency;
                                         pc.efficiency *= max;
                                     }
                                 }
@@ -420,7 +418,6 @@ public class calculateReal extends mrc.calculation {
                                 if (pc.products != null) {
                                     for (items is : pc.products) {
                                         if (is.item == item) {
-                                            float p = pc.efficiency;
                                             pc.efficiency *= ratio;
                                         }
                                     }
@@ -430,7 +427,6 @@ public class calculateReal extends mrc.calculation {
                             for (pc pc : apc) {
                                 if (pc.liquidProduct != null) {
                                     if (pc.liquidProduct == liquid) {
-                                        float p = pc.efficiency;
                                         pc.efficiency *= ratio;
                                     }
                                 }
