@@ -1,5 +1,6 @@
 [![Github All Releases](https://img.shields.io/github/downloads/L0615T1C5-216AC-9437/MaxRateCalculator/total.svg)]()
-![GitHub issues](https://img.shields.io/github/issues/L0615T1C5-216AC-9437/MaxRateCalculator)
+![GitHub issues](https://img.shields.io/github/issues/L0615T1C5-216AC-9437/MaxRateCalculator)  
+*A V6 Version of this mod can be found [here](https://github.com/L0615T1C5-216AC-9437/MaxRateCalculatorV6).*
 
 # Max Rate Calculator
 A mindustry mod that allows you to calculate the efficiency, bottle neck and ratios of your machinations.  
