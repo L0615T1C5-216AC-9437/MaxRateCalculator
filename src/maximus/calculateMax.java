@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static maximus.mrc.translatedStringPower;
 import static mindustry.Vars.world;
 
 public class calculateMax extends mrc.calculation {
@@ -32,7 +33,7 @@ public class calculateMax extends mrc.calculation {
     public final HashMap<Liquid, List<pcEntry>> liquidPC;
     public final List<Float> powerPC;
     //
-    private static final String label = "Max Ratios\n[orange]=========================[white]";
+    public static String translatedStringLabel = "";
 
     public calculateMax(int x1, int y1, int x2, int y2) throws Exception {
         super(x1, y1, x2, y2);
@@ -221,12 +222,12 @@ public class calculateMax extends mrc.calculation {
             }
         }
                 /*
-                Menus.label(t.block().name + "\n" + t.block().category.name(), 10, t.x * 8f, t.y * 8f);
+                Menus.translatedStringLabel(t.block().name + "\n" + t.block().category.name(), 10, t.x * 8f, t.y * 8f);
                 ui.chatfrag.addMessage(t.block().name, null);
                 ui.chatfrag.addMessage(t.block().category.name(), null);
                  */
         DecimalFormat df = new DecimalFormat("0000.00");
-        StringBuilder builder = new StringBuilder(label);
+        StringBuilder builder = new StringBuilder(translatedStringLabel);
         for (Item i : maxItemAverages.keySet()) {
             averages ia = maxItemAverages.get(i);
             if (ia != null) {
@@ -246,12 +247,12 @@ public class calculateMax extends mrc.calculation {
             }
         }
         if (maxPowerAverageP > 0 || maxPowerAverageN < 0) {
-            builder.append("\n[yellow]Power [white]: ").append(maxPowerAverageP + maxPowerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(maxPowerAverageP + maxPowerAverageN));
+            builder.append("\n[yellow]").append(translatedStringPower).append(" [white]: ").append(maxPowerAverageP + maxPowerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(maxPowerAverageP + maxPowerAverageN));
             if (maxPowerAverageP > 0) builder.append(" [white]= [lime]+").append(df.format(maxPowerAverageP));
             if (maxPowerAverageN < 0) builder.append(" [white]").append(maxPowerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(maxPowerAverageN));
         }
 
-        if (!builder.toString().equals(label)) formattedMessage = builder.toString();
+        if (!builder.toString().equals(translatedStringLabel)) formattedMessage = builder.toString();
     }
 
 

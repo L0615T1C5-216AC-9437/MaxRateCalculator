@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static maximus.mrc.translatedStringOptional;
+import static maximus.mrc.translatedStringPower;
 import static mindustry.Vars.world;
 
 public class calculateReal extends mrc.calculation {
@@ -32,7 +34,8 @@ public class calculateReal extends mrc.calculation {
     private Item bestFlammableFuel = null;
     private Item bestRadioactiveFuel = null;
     //
-    private static final String label = "Real Ratios\n[lightgray]%[gray]: [lightgray]% of total production capacity \n[orange]=========================[white]";
+    public static String translatedStringLabel = "";
+    public static String translatedStringPowerGeneration = "";
     //old
     public final HashMap<Item, List<pcEntry>> itemPC ;
 
@@ -254,7 +257,7 @@ public class calculateReal extends mrc.calculation {
         });
 
         DecimalFormat df = new DecimalFormat("0.00");
-        StringBuilder builder = new StringBuilder(label);
+        StringBuilder builder = new StringBuilder(translatedStringLabel);
         for (Object o : isd.keySet()) {
             finalAverages averages = isd.get(o);
             String emoji = "";
@@ -274,17 +277,17 @@ public class calculateReal extends mrc.calculation {
             if (0.001f > difference && difference > -0.001f) difference = 0f;
             if (averages.production > 0 || averages.consumption > 0) builder.append(difference == 0 ? " [lightgray]" : difference < 0 ? " [scarlet]" : " [lime]+").append(df.format(difference));
             if (averages.production > 0 && averages.consumption > 0) builder.append(" [white]= [lime]+").append(df.format(averages.production)).append(" [white]+ [scarlet]-").append(df.format(averages.consumption));
-            if (averages.consumptionOptional > 0) builder.append(" [lightgray](-").append(df.format(averages.consumptionOptional)).append(" Optional)");
+            if (averages.consumptionOptional > 0) builder.append(" [lightgray](-").append(df.format(averages.consumptionOptional)).append(" ").append(translatedStringOptional).append(")");
         }
         if (powerAverageP > 0) {
-            builder.append("\n[white]([lightgray]").append(df.format((powerEfficiencies / powerProducers) * 100f)).append("%[white]) ").append(Iconc.power).append("[yellow]Power Generation : [lime]+").append(powerAverageP);
+            builder.append("\n[white]([lightgray]").append(df.format((powerEfficiencies / powerProducers) * 100f)).append("%[white]) ").append(Iconc.power).append("[yellow]").append(translatedStringPowerGeneration).append(" : [lime]+").append(powerAverageP);
         }
         if (powerAverageP > 0 || powerAverageN < 0) {
-            builder.append("\n[yellow]Power [white]: ").append(powerAverageP + powerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(powerAverageP + powerAverageN));
+            builder.append("\n[yellow]").append(translatedStringPower).append(" [white]: ").append(powerAverageP + powerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(powerAverageP + powerAverageN));
             if (powerAverageP > 0 && powerAverageN < 0) builder.append(" [white]= [lime]+").append(df.format(powerAverageP)).append(" [white]").append(powerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(powerAverageN));
         }
 
-        if (!builder.toString().equals(label)) formattedMessage = builder.toString();
+        if (!builder.toString().equals(translatedStringLabel)) formattedMessage = builder.toString();
     }
 
     private static class pcEntry {
@@ -353,11 +356,6 @@ public class calculateReal extends mrc.calculation {
             this.item = item;
             this.amount = amount;
         }
-
-        public items(ItemStack is) {
-            this.item = is.item;
-            this.amount = is.amount;
-        }
     }
 
     private static items[] IStoItems(ItemStack[] is) {
@@ -376,7 +374,7 @@ public class calculateReal extends mrc.calculation {
     private void normalizeRates() {
         boolean finalResult = false;
         for (int i = 0; i < 30 && !finalResult; i++) { //tried while loop but it sucks ass
-            if (i == 29) Log.err("normalizeRates looped 30 times!");
+            if (i == 29) Log.err(mrc.bundle.getString("calculateReal.tookTooLong"));
             HashMap<Object, Float> pcr = getPCRatio();
             if (!pcr.isEmpty()) {
                 float max = -1;

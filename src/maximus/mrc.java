@@ -19,31 +19,32 @@ import mindustry.graphics.Pal;
 import mindustry.input.Placement;
 import mindustry.mod.Mod;
 import mindustry.type.Item;
-import mindustry.type.Liquid;
 import mindustry.ui.Menus;
 import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.Tile;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
+import static arc.Core.settings;
 import static mindustry.Vars.player;
 import static mindustry.Vars.world;
 
 public class mrc extends Mod {
     private static final KeyCode key = KeyCode.backtick;
     private static final int maxSelection = 500;
-    private static final String[][] buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\nCalculate Max\nCalculate Real");
     private static final Item[] allItems = new Item[] { Items.copper, Items.lead, Items.metaglass, Items.graphite, Items.sand, Items.copper, Items.titanium, Items.thorium, Items.scrap, Items.silicon, Items.plastanium, Items.phaseFabric, Items.surgeAlloy, Items.sporePod, Items.blastCompound, Items.pyratite};
-
+    public static ResourceBundle bundle;
+    //menu
+    private static String[][] buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\nCalculate Maximum\nCalculate Real");
+    public static String menuTitle = "";
+    public static String menuDescription = "";
+    //translations
+    public static String translatedStringPower = "";
+    public static String translatedStringOptional = "";
 
     private static int x1 = -1, y1 = -1, x2 = -1, y2 = -1;
-    //calculateMax
-    private static final HashMap<Item, List<pcEntry>> itemPC = new HashMap<>();
-    private static final HashMap<Liquid, List<pcEntry>> liquidPC = new HashMap<>();
-    private static final List<Float> powerPC = new ArrayList<>();
 
     public mrc(){
         Log.info("Loading Events in Max Rate Calculator.");
@@ -55,6 +56,41 @@ public class mrc extends Mod {
             }
         });
         Events.on(ClientLoadEvent.class, event -> {
+            Locale locale;
+            String loc = settings.getString("locale");
+            if(loc.equals("default")){
+                locale = Locale.getDefault();
+            }else{
+                Locale lastLocale;
+                if(loc.contains("_")){
+                    String[] split = loc.split("_");
+                    lastLocale = new Locale(split[0], split[1]);
+                }else{
+                    lastLocale = new Locale(loc);
+                }
+                locale = lastLocale;
+            }
+            try {
+                bundle = ResourceBundle.getBundle("languagePack", locale);
+            } catch (Exception ignored) {
+                Log.err("No language pack available for Max Rate Calculator, defaulting to english");
+                bundle = ResourceBundle.getBundle("languagePack", Locale.ENGLISH);
+            }
+            //setup
+            menuTitle = bundle.getString("mrc.mrc");
+            menuDescription = bundle.getString("mrc.menuDescription");
+            buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\n" + bundle.getString("calculateMaximum") + "\n" + bundle.getString("calculateReal"));
+
+            translatedStringPower = Core.bundle.get("bar.power");
+            translatedStringOptional = mrc.bundle.getString("optional");
+
+            calculateReal.translatedStringLabel = mrc.bundle.getString("calculateReal") + mrc.bundle.getString("calculateReal.label");
+            calculateReal.translatedStringPowerGeneration = mrc.bundle.getString("powerGeneration");
+
+            calculateMax.translatedStringLabel = mrc.bundle.getString("calculateMaximum") + "\n[orange]=========================[white]";
+
+
+            //
             Menus.registerMenu(69420, (player, selection) -> {
                 if (selection < 0) return;
                 if (selection < 16) {
@@ -91,17 +127,7 @@ public class mrc extends Mod {
                 y2 = -1;
             });
             if (!Core.settings.has("mrcFirstTime")) {
-                Menus.infoMessage("""
-                        [accent]Thank you [white]for using the Max Rate Calculator
-
-                        To use the Max Rate Calculator, press the [lightgray][` ~][white] key in your keyboard and drag as if you were making a schematic.
-                        Anything inside the selection box will be counted in the calculation.
-
-                        If you accidentally use the max rate calculator and a menu pops up, you can press [lightgray][esc][white] to quit menu without triggering anything
-                        
-                        If you have any questions, you can contact me through [sky]discord[white], L0615T1C5.216AC#9437 or go to [lightgray]http://cn-discord.ddns.net[white] and ping me (Server Owner)
-                        
-                        [lightgray]This message will not appear again""");
+                Menus.infoMessage(bundle.getString("mrc.firstTimeMessage"));
                 Core.settings.put("mrcFirstTime", false);
                 Core.settings.forceSave();
             }
@@ -116,7 +142,7 @@ public class mrc extends Mod {
             if (Core.input.keyRelease(key) && x1 != -1 && y1 != -1) {
                 x2 = rawCursorX;
                 y2 = rawCursorY;
-                Menus.menu(69420, "Max Rate Calculator!", "(Not Coded yet) Select the 1 item being exported and ignore other extra resources\n[accent]Calculate Max[white]: Calculate as if everything was working at 100% all the time.\n[accent]Calculate Real[white]: Wont compensate for missing resources thus lower efficiency accordingly", buttons);
+                Menus.menu(69420, menuTitle, menuDescription, buttons);
                 //calculate(x1, y1, rawCursorX, rawCursorY);
             }
         });
@@ -134,18 +160,6 @@ public class mrc extends Mod {
         int yt = Math.max(y1, y2);
 
 
-    }
-
-    private static class pcEntry {
-        public final float production;
-        public final float consumption;
-        public final boolean optional;
-
-        public pcEntry(float production, float consumption, boolean optional) {
-            this.production = production;
-            this.consumption = consumption;
-            this.optional = optional;
-        }
     }
 
     //menu formatter
