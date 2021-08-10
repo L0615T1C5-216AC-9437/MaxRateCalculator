@@ -38,7 +38,8 @@ The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This 
 
 ## Android?
 no.
-but you can check for precompiled binaries in actions tab
+
+but you can check for precompiled binaries in actions tab if you want to edit it on a fork and try making it work.
 
 ## Supported Languages
 English (en)  
