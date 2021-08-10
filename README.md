@@ -8,6 +8,14 @@ A mindustry mod that allows you to calculate the efficiency, bottle neck and rat
 <img src="docs/exampleImage.png" alt="MaxRatio" width="499"/>
 
 ## Installation Guide
+
+In-Game Installation
+1. Open mindustry, go to `mods` section
+2. Select `Browse Mods`
+3. Search for `Max Rate Calculator`
+4. Download and **Enable** the mod
+
+Manual Installation  
 1. Download the latest mod verion in [#Releases](https://github.com/L0615T1C5-216AC-9437/MaxRateCalculator/releases).
 2. Open mindustry, go to `mods` section, select `Open Folder`
 3. Move the mod (`Jar` file) into the folder
