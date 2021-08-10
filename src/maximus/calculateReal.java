@@ -265,11 +265,11 @@ public class calculateReal extends mrc.calculation {
             String color = "";
             if (o instanceof Item item) {
                 emoji = item.emoji();
-                name = item.name;
+                name = item.localizedName;
                 color = item.color + "";
             } if (o instanceof Liquid liquid) {
                 emoji = liquid.emoji();
-                name = liquid.name;
+                name = liquid.localizedName;
                 color = liquid.color + "";
             }
             builder.append("\n[white]([lightgray]").append(df.format((averages.efficiencies / averages.machines) * 100f)).append("%[white]) ").append(emoji).append("[#").append(color).append("]").append(name).append(" :");
@@ -283,7 +283,7 @@ public class calculateReal extends mrc.calculation {
             builder.append("\n[white]([lightgray]").append(df.format((powerEfficiencies / powerProducers) * 100f)).append("%[white]) ").append(Iconc.power).append("[yellow]").append(translatedStringPowerGeneration).append(" : [lime]+").append(powerAverageP);
         }
         if (powerAverageP > 0 || powerAverageN < 0) {
-            builder.append("\n[yellow]").append(translatedStringPower).append(" [white]: ").append(powerAverageP + powerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(powerAverageP + powerAverageN));
+            builder.append("\n[yellow]").append(translatedStringPower).append(" : [white]").append(powerAverageP + powerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(powerAverageP + powerAverageN));
             if (powerAverageP > 0 && powerAverageN < 0) builder.append(" [white]= [lime]+").append(df.format(powerAverageP)).append(" [white]").append(powerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(powerAverageN));
         }
 

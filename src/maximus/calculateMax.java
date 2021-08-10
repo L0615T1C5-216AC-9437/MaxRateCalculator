@@ -221,17 +221,12 @@ public class calculateMax extends mrc.calculation {
                 maxPowerAverageN += p;
             }
         }
-                /*
-                Menus.translatedStringLabel(t.block().name + "\n" + t.block().category.name(), 10, t.x * 8f, t.y * 8f);
-                ui.chatfrag.addMessage(t.block().name, null);
-                ui.chatfrag.addMessage(t.block().category.name(), null);
-                 */
         DecimalFormat df = new DecimalFormat("0000.00");
         StringBuilder builder = new StringBuilder(translatedStringLabel);
         for (Item i : maxItemAverages.keySet()) {
             averages ia = maxItemAverages.get(i);
             if (ia != null) {
-                builder.append("\n[white]").append(i.emoji()).append("[#").append(i.color).append("]").append(i.name).append(" :");
+                builder.append("\n[white]").append(i.emoji()).append("[#").append(i.color).append("]").append(i.localizedName).append(" :");
                 if (ia.production + ia.consumption != 0) builder.append(ia.production + ia.consumption < 0 ? " [scarlet]" : " [lime]+").append(df.format(ia.production + ia.consumption));
                 if (ia.production > 0 && ia.consumption < 0) builder.append(" [white]= [lime]+").append(df.format(ia.production)).append(" [white]+ [scarlet]").append(df.format(ia.consumption));
                 if (ia.consumptionOptional < 0) builder.append(" [lightgray](").append(df.format(ia.consumptionOptional)).append(" Optional)");
@@ -240,14 +235,14 @@ public class calculateMax extends mrc.calculation {
         for (Liquid l : maxLiquidAverages.keySet()) {
             averages ia = maxLiquidAverages.get(l);
             if (ia != null) {
-                builder.append("\n[white]").append(l.emoji()).append("[#").append(l.color).append("]").append(l.name).append(" :");
+                builder.append("\n[white]").append(l.emoji()).append("[#").append(l.color).append("]").append(l.localizedName).append(" :");
                 if (ia.production + ia.consumption != 0) builder.append(ia.production + ia.consumption < 0 ? " [scarlet]" : " [lime]+").append(df.format(ia.production + ia.consumption));
                 if (ia.production > 0 && ia.consumption < 0) builder.append(" [white]= [lime]+").append(df.format(ia.production)).append(" [white]+ [scarlet]").append(df.format(ia.consumption));
                 if (ia.consumptionOptional < 0) builder.append(" [lightgray](").append(df.format(ia.consumptionOptional)).append(" Optional)");
             }
         }
         if (maxPowerAverageP > 0 || maxPowerAverageN < 0) {
-            builder.append("\n[yellow]").append(translatedStringPower).append(" [white]: ").append(maxPowerAverageP + maxPowerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(maxPowerAverageP + maxPowerAverageN));
+            builder.append("\n[yellow]").append(translatedStringPower).append(" : [white]").append(maxPowerAverageP + maxPowerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(maxPowerAverageP + maxPowerAverageN));
             if (maxPowerAverageP > 0) builder.append(" [white]= [lime]+").append(df.format(maxPowerAverageP));
             if (maxPowerAverageN < 0) builder.append(" [white]").append(maxPowerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(maxPowerAverageN));
         }
