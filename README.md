@@ -1,6 +1,6 @@
 [![Github All Releases](https://img.shields.io/github/downloads/L0615T1C5-216AC-9437/MaxRateCalculator/total.svg)]()
 # Max Rate Calculator
-A plugin that allows you to calculate the efficiency, bottle neck and ratios of your machinations.  
+A mindustry mod that allows you to calculate the efficiency, bottle neck and ratios of your machinations.  
 *may or may not work with modded items / blocks*
 
 ![image](docs/MaxRatios1.png)
@@ -13,7 +13,7 @@ A plugin that allows you to calculate the efficiency, bottle neck and ratios of 
    If you get a welcome message, the mod was successfully installed
 
 ## Usage
-The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This is done by pressing the [` ~] button in your keyboard and selecting a area as if you were making a schematic.
+The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This is done by pressing the \[ ` ~ ] button in your keyboard and selecting a area as if you were making a schematic.
 1. Press [` ~] in your keyboard
 2. Move your mouse
 3. Select what type of calculation you want (Max Rate, Real Rate, etc.)
@@ -28,6 +28,11 @@ The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This 
 
 ## Android?
 no.
+
+## Supported Languages
+English (en)  
+Spanish (es)  
+*This mod will automatically switch language if a Language Pack is available.*
 
 ## Need Help?
 If you have any questions on how to run / build / use this mod you can contact me through discord.  
