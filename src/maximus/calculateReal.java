@@ -1,20 +1,20 @@
 package maximus;
 
+import arc.graphics.Color;
 import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Nullable;
 import mindustry.Vars;
 import mindustry.gen.Building;
 import mindustry.gen.Iconc;
-import mindustry.type.Category;
-import mindustry.type.Item;
-import mindustry.type.ItemStack;
-import mindustry.type.Liquid;
+import mindustry.type.*;
 import mindustry.world.Tile;
 import mindustry.world.blocks.defense.MendProjector;
 import mindustry.world.blocks.defense.OverdriveProjector;
 import mindustry.world.blocks.power.*;
 import mindustry.world.blocks.production.*;
+import mindustry.world.blocks.units.Reconstructor;
+import mindustry.world.blocks.units.UnitFactory;
 import mindustry.world.consumers.ConsumeItems;
 import mindustry.world.consumers.ConsumeLiquid;
 import mindustry.world.consumers.ConsumePower;
@@ -190,6 +190,23 @@ public class calculateReal extends mrc.calculation {
                         pc.materials = IStoItems(ci.items);
                     }
                 }
+                //Unit Factory
+                if (t.block() instanceof UnitFactory uf && t.build instanceof UnitFactory.UnitFactoryBuild ufb) {
+                    if (ufb.currentPlan != -1) {
+                        UnitFactory.UnitPlan up = uf.plans.get(ufb.currentPlan);
+                        pc.unitProduct = up.unit;
+                        pc.materials = IStoItems(up.requirements);
+                        pc.rate = 3600f / up.time;
+                    }
+                }
+                if (t.block() instanceof Reconstructor r) {
+                    pc.isReconstructor = true;
+                    pc.upgrades = r.upgrades;
+                    if (r.consumes.has(ConsumeType.item) && r.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
+                        pc.materials = IStoItems(ci.items);
+                        pc.rate = 3600f / r.constructTime;
+                    }
+                }
                 //misc.
                 if (t.block() instanceof OverdriveProjector op) {
                     if (op.consumes.has(ConsumeType.item) && op.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
@@ -236,6 +253,17 @@ public class calculateReal extends mrc.calculation {
                 isd.putIfAbsent(pc.liquidUsage, new finalAverages());
                 isd.get(pc.liquidUsage).consumption += (pc.liquidUsageRate * pc.efficiency);
             }
+            if (pc.unitProduct != null) {
+                isd.putIfAbsent(pc.unitProduct, new finalAverages());
+                finalAverages fa = isd.get(pc.unitProduct);
+                fa.production += (pc.rate * pc.efficiency);
+                fa.machines++;
+                fa.efficiencies += pc.efficiency;
+            }
+            if (pc.unitUsed != null) {
+                isd.putIfAbsent(pc.unitUsed, new finalAverages());
+                isd.get(pc.unitUsed).consumption += (pc.rate * pc.efficiency);
+            }
 
             if (pc.powerProduction > 0) {
                 powerEfficiencies += pc.efficiency;
@@ -271,6 +299,10 @@ public class calculateReal extends mrc.calculation {
                 emoji = liquid.emoji();
                 name = liquid.localizedName;
                 color = liquid.color + "";
+            } if (o instanceof UnitType unit) {
+                emoji = unit.emoji();
+                name = unit.name;
+                color = Color.white + "";
             }
             builder.append("\n[white]([lightgray]").append(df.format((averages.efficiencies / averages.machines) * 100f)).append("%[white]) ").append(emoji).append("[#").append(color).append("]").append(name).append(" :");
             float difference = averages.production - averages.consumption;
@@ -336,6 +368,11 @@ public class calculateReal extends mrc.calculation {
         @Nullable
         public Liquid liquidProduct;
         public float liquidProductionRate;
+        @Nullable
+        public UnitType unitProduct;
+        public UnitType unitUsed;
+        public boolean isReconstructor;
+        public Seq<UnitType[]> upgrades;
 
         public boolean usesFlammableItem;
         public boolean usesRadioactiveItem;
@@ -407,6 +444,14 @@ public class calculateReal extends mrc.calculation {
                                     }
                                 }
                             }
+                        } else if (maxItem instanceof UnitType maximum) {
+                            for (pc pc : apc) {
+                                if (pc.unitUsed != null) {
+                                    if (pc.unitUsed == maximum) {
+                                        pc.efficiency *= max;
+                                    }
+                                }
+                            }
                         }
                     } else if (max > 1f) {
                         float ratio = 1f / max;
@@ -429,6 +474,14 @@ public class calculateReal extends mrc.calculation {
                                     }
                                 }
                             }
+                        } else if (maxItem instanceof UnitType unit) {
+                            for (pc pc : apc) {
+                                if (pc.unitProduct != null) {
+                                    if (pc.unitProduct == unit) {
+                                        pc.efficiency *= ratio;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -443,7 +496,7 @@ public class calculateReal extends mrc.calculation {
         getSD().forEach((item, sd) -> {
             if (sd.demand > 0) {
                 float ratio = sd.supply / sd.demand;
-                if ( !(1.001f > ratio && ratio > 0.999f) && ratio > 0.001f) pcr.put(item, ratio); //don't attempt to fix if perfect or 0.001% off
+                if ( !(1.001f > ratio && ratio > 0.999f) && ratio > 0f) pcr.put(item, ratio); //don't attempt to fix if perfect or 0.001% off
             }
         });
         return pcr;
@@ -453,6 +506,7 @@ public class calculateReal extends mrc.calculation {
         HashMap<Object, sd> isd = new HashMap<>();
         float flammableFuelDemand = 0f;
         float radioactiveFuelDemand = 0f;
+        HashMap<UnitType, UnitType> reconstructorUpgrades = new HashMap<>();
         for (pc pc : apc) {
             if (pc.products != null) for (items is : pc.products) {
                 isd.putIfAbsent(is.item, new sd());
@@ -470,6 +524,19 @@ public class calculateReal extends mrc.calculation {
                 isd.putIfAbsent(pc.liquidUsage, new sd());
                 isd.get(pc.liquidUsage).demand += (pc.liquidUsageRate * pc.efficiency);
             }
+            if (pc.unitProduct != null) {
+                isd.putIfAbsent(pc.unitProduct, new sd());
+                isd.get(pc.unitProduct).supply += (pc.rate * pc.efficiency);
+            }
+            if (pc.unitUsed != null) {
+                isd.putIfAbsent(pc.unitUsed, new sd());
+                isd.get(pc.unitUsed).demand += (pc.rate * pc.efficiency);
+            }
+            if (pc.isReconstructor && pc.upgrades != null && pc.unitUsed == null) {
+                for (UnitType[] upgrade : pc.upgrades) {
+                    reconstructorUpgrades.put(upgrade[0], upgrade[1]);
+                }
+            }
             if (pc.usesFlammableItem && pc.materials == null) {
                 flammableFuelDemand += (pc.rate * pc.efficiency);
             }
@@ -478,6 +545,44 @@ public class calculateReal extends mrc.calculation {
             }
         }
         //
+        if (!reconstructorUpgrades.isEmpty()) {
+            UnitType a = null;
+            UnitType b = null;
+            for (Object o : isd.keySet()) {
+                if (o instanceof UnitType unit) {
+                    if (reconstructorUpgrades.containsKey(unit)) {
+                        a = unit;
+                        b = reconstructorUpgrades.get(unit);
+                        break;
+                    }
+                }
+            }
+            if (a == null) {
+                for (UnitType c : reconstructorUpgrades.keySet()) {
+                    a = c;
+                    b = reconstructorUpgrades.get(c);
+                    break;
+                }
+            }
+            if (a != null && b != null) {
+                isd.putIfAbsent(a, new sd());
+                isd.putIfAbsent(b, new sd());
+                for (pc pc : apc) {
+                    if (pc.isReconstructor) {
+                        for (UnitType[] upgrade : pc.upgrades) {
+                            if (upgrade[0] == a) {
+                                isd.get(a).demand += pc.rate;
+                                isd.get(b).supply += pc.rate;
+
+                                pc.unitUsed = a;
+                                pc.unitProduct = b;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         if (flammableFuelDemand > 0f && bestFlammableFuel == null) {
             float bestFlammability = -1;
             Item bestFlammable = null;
