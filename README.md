@@ -48,7 +48,7 @@ Spanish (es)
 ## Need Help?
 If you have any questions on how to run / build / use this mod you can contact me through discord.  
 Discord: `L0615T1C4L.N16HTM4R3#6238` ( I respond to DM's)  
-Discord-Server: [Chaotic-Neutral](http://cn-discord.ddns.net) (The one with Owner Role)  
+Discord-Server: https://discord.gg/e5t2672rm2
 
 --- 
 *[1]* *Acronym for Max Rate Calculator*  
