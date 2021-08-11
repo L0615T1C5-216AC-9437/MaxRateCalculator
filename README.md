@@ -52,4 +52,4 @@ Discord-Server: [Chaotic-Neutral](http://cn-discord.ddns.net) (The one with Owne
 
 --- 
 *[1]* *Acronym for Max Rate Calculator*  
-*[2]* *On Linux/Mac it's `./gradlew`, but if you're using Linux I assume you know how to run executables properly anyway.*
+*[2]* *On Linux/Mac it's `./gradlew`, If the terminal returns Permission denied or Command not found run chmod +x ./gradlew*
