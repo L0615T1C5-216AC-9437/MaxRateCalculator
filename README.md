@@ -25,7 +25,7 @@ Manual Installation
 
 ## Usage
 The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This is done by pressing the \[ ` ~ ] button in your keyboard and selecting a area as if you were making a schematic.
-1. Press [` ~] in your keyboard
+1. Press \[ ` ~ ] in your keyboard
 2. Move your mouse
 3. Select what type of calculation you want (Max Rate, Real Rate, etc.)
 4. Profit.
