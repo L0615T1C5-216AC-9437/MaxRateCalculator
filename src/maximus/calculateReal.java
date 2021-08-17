@@ -1,5 +1,6 @@
 package maximus;
 
+import arc.Core;
 import arc.graphics.Color;
 import arc.struct.Seq;
 import arc.util.Log;
@@ -274,14 +275,20 @@ public class calculateReal extends mrc.calculation {
         }
 
         itemPC.forEach((k, v) -> {
+            float consumption = 0f;
             float consumptionOptional = 0f;
 
             for (pcEntry pce : v) {
                 if (pce.optional) {
                     consumptionOptional += pce.consumption;
+                } else {
+                    consumption += pce.consumption;
                 }
             }
-            isd.put(k, new finalAverages(0f, 0f, consumptionOptional));
+            isd.putIfAbsent(k, new finalAverages());
+            finalAverages fa = isd.get(k);
+            fa.consumption += consumption;
+            fa.consumptionOptional += consumptionOptional;
         });
 
         DecimalFormat df = new DecimalFormat("0.00");
