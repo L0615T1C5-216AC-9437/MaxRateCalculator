@@ -9,7 +9,6 @@ import arc.graphics.g2d.Lines;
 import arc.input.KeyCode;
 import arc.util.Log;
 import mindustry.content.Blocks;
-import mindustry.content.Items;
 import mindustry.core.World;
 import mindustry.game.EventType;
 import mindustry.game.EventType.ClientLoadEvent;
@@ -18,7 +17,6 @@ import mindustry.graphics.Drawf;
 import mindustry.graphics.Pal;
 import mindustry.input.Placement;
 import mindustry.mod.Mod;
-import mindustry.type.Item;
 import mindustry.ui.Menus;
 import mindustry.world.Block;
 import mindustry.world.Build;
@@ -34,7 +32,6 @@ import static mindustry.Vars.world;
 public class mrc extends Mod {
     private static final KeyCode key = KeyCode.backtick;
     private static final int maxSelection = 500;
-    private static final Item[] allItems = new Item[] { Items.copper, Items.lead, Items.metaglass, Items.graphite, Items.sand, Items.copper, Items.titanium, Items.thorium, Items.scrap, Items.silicon, Items.plastanium, Items.phaseFabric, Items.surgeAlloy, Items.sporePod, Items.blastCompound, Items.pyratite};
     public static ResourceBundle bundle;
     //menu
     private static String[][] buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\nCalculate Maximum\nCalculate Real");
@@ -52,7 +49,7 @@ public class mrc extends Mod {
         //listen for game load event
         Events.run(Trigger.draw, () -> {
             if (Core.input.keyDown(key) && x1 != -1 && y1 != -1) {
-                drawSelection(x1, y1, tileX(Core.input.mouseX()), tileY(Core.input.mouseY()), maxSelection);
+                drawSelection(x1, y1, tileX(Core.input.mouseX()), tileY(Core.input.mouseY()));
             }
         });
         Events.on(ClientLoadEvent.class, event -> {
@@ -94,7 +91,7 @@ public class mrc extends Mod {
             Menus.registerMenu(69420, (player, selection) -> {
                 if (selection < 0) return;
                 if (selection < 16) {
-                    calculateMax(x1, y1, x2, y2, allItems[selection]);
+                    //calculate Real but don't limit selected Item
                 } else {
                     calculation cal = null;
                     switch (selection) {
@@ -152,15 +149,6 @@ public class mrc extends Mod {
     public void loadContent(){
 		Log.info("Loading the Max Rate Calculator!");
     }
-    //calculation
-    private static void calculateMax(int x1, int y1, int x2, int y2, Item out) {
-        int xl = Math.min(x1, x2);
-        int xr = Math.max(x1, x2);
-        int yb = Math.min(y1, y2);
-        int yt = Math.max(y1, y2);
-
-
-    }
 
     //menu formatter
     public static String[][] menuButtonFormatter(String input) {
@@ -184,11 +172,11 @@ public class mrc extends Mod {
         return Build.validBreak(player.team(), x, y);
     }
     //anuke likes to draw stuff
-    void drawSelection(int x1, int y1, int x2, int y2, int maxLength) {
+    void drawSelection(int x1, int y1, int x2, int y2) {
         //todo: fix weird bloom effect
         Draw.reset();
-        Placement.NormalizeDrawResult result = Placement.normalizeDrawArea(Blocks.air, x1, y1, x2, y2, false, maxLength, 1f);
-        Placement.NormalizeResult dresult = Placement.normalizeArea(x1, y1, x2, y2, 0, false, maxLength);
+        Placement.NormalizeDrawResult result = Placement.normalizeDrawArea(Blocks.air, x1, y1, x2, y2, false, mrc.maxSelection, 1f);
+        Placement.NormalizeResult dresult = Placement.normalizeArea(x1, y1, x2, y2, 0, false, mrc.maxSelection);
 
         for(int x = dresult.x; x <= dresult.x2; x++){
             for(int y = dresult.y; y <= dresult.y2; y++){
