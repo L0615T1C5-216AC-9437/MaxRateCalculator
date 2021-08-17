@@ -8,6 +8,7 @@ import arc.graphics.g2d.Fill;
 import arc.graphics.g2d.Lines;
 import arc.input.KeyCode;
 import arc.util.Log;
+import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.core.World;
 import mindustry.game.EventType;
@@ -53,6 +54,7 @@ public class mrc extends Mod {
             }
         });
         Events.on(ClientLoadEvent.class, event -> {
+            //load language pack
             Locale locale;
             String loc = settings.getString("locale");
             if(loc.equals("default")){
@@ -86,8 +88,15 @@ public class mrc extends Mod {
 
             calculateMax.translatedStringLabel = mrc.bundle.getString("calculateMaximum") + "\n[orange]=========================[white]";
 
+            //add setting to core bundle
+            var coreBundle = Core.bundle.getProperties();
+            coreBundle.put("setting.mrcShowZeroAverageMath.name", mrc.bundle.getString("mrc.settings.ShowZeroAverageMath"));
+            Core.bundle.setProperties(coreBundle);
+            //add custom settings
+            Core.settings.put("uiscalechanged", false);//stop annoying "ui scale changed" message
+            addBooleanGameSetting("mrcShowZeroAverageMath", true);
 
-            //
+            //register menu
             Menus.registerMenu(69420, (player, selection) -> {
                 if (selection < 0) return;
                 if (selection < 16) {
@@ -230,5 +239,9 @@ public class mrc extends Mod {
         public void callLabel() {
             Menus.label(formattedMessage, 30, (xl + xr) * 4f, (yb - 5) * 8f);
         }
+    }
+
+    public static void addBooleanGameSetting(String key, boolean defaultBooleanValue){
+        Vars.ui.settings.game.checkPref(key, Core.settings.getBool(key, defaultBooleanValue));
     }
 }

@@ -307,8 +307,8 @@ public class calculateReal extends mrc.calculation {
             builder.append("\n[white]([lightgray]").append(df.format((averages.efficiencies / averages.machines) * 100f)).append("%[white]) ").append(emoji).append("[#").append(color).append("]").append(name).append(" :");
             float difference = averages.production - averages.consumption;
             if (0.001f > difference && difference > -0.001f) difference = 0f;
-            if (averages.production > 0 || averages.consumption > 0) builder.append(difference == 0 ? " [lightgray]" : difference < 0 ? " [scarlet]" : " [lime]+").append(df.format(difference));
-            if (averages.production > 0 && averages.consumption > 0) builder.append(" [white]= [lime]+").append(df.format(averages.production)).append(" [white]+ [scarlet]-").append(df.format(averages.consumption));
+            if (averages.production > 0 || averages.consumption > 0) builder.append(difference == 0f ? " [lightgray]" : difference < 0 ? " [scarlet]" : " [lime]+").append(df.format(difference));
+            if ((Core.settings.getBool("mrcShowZeroAverageMath", true) || difference != 0f) && averages.production > 0 && averages.consumption > 0) builder.append(" [white]= [lime]+").append(df.format(averages.production)).append(" [white]+ [scarlet]-").append(df.format(averages.consumption));
             if (averages.consumptionOptional > 0) builder.append(" [lightgray](-").append(df.format(averages.consumptionOptional)).append(" ").append(translatedStringOptional).append(")");
         }
         if (powerAverageP > 0) {
