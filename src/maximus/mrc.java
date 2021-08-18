@@ -90,10 +90,12 @@ public class mrc extends Mod {
 
             //add setting to core bundle
             var coreBundle = Core.bundle.getProperties();
+            coreBundle.put("setting.mrcSendInfoMessage.name", mrc.bundle.getString("mrc.settings.SendInfoMessage"));
             coreBundle.put("setting.mrcShowZeroAverageMath.name", mrc.bundle.getString("mrc.settings.ShowZeroAverageMath"));
             Core.bundle.setProperties(coreBundle);
             //add custom settings
             Core.settings.put("uiscalechanged", false);//stop annoying "ui scale changed" message
+            addBooleanGameSetting("mrcSendInfoMessage", false);
             addBooleanGameSetting("mrcShowZeroAverageMath", true);
 
             //register menu
@@ -122,9 +124,11 @@ public class mrc extends Mod {
                         }
                     }
                     if (cal != null && !cal.formattedMessage.isEmpty()) {
-                        cal.callLabel();
-                    } else {
-                        Log.err("cal null or format message bad");
+                        if (settings.getBool("mrcSendInfoMessage", false)) {
+                            cal.callInfoMessage();
+                        } else {
+                            cal.callLabel();
+                        }
                     }
                 }
                 x1 = -1;
@@ -238,6 +242,10 @@ public class mrc extends Mod {
 
         public void callLabel() {
             Menus.label(formattedMessage, 30, (xl + xr) * 4f, (yb - 5) * 8f);
+        }
+
+        public void callInfoMessage() {
+            Vars.ui.showInfo(formattedMessage);
         }
     }
 
