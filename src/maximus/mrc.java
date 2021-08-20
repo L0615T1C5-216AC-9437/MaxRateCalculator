@@ -83,10 +83,9 @@ public class mrc extends Mod {
             translatedStringPower = Core.bundle.get("bar.power");
             translatedStringOptional = mrc.bundle.getString("optional");
 
-            calculateReal.translatedStringLabel = mrc.bundle.getString("calculateReal") + mrc.bundle.getString("calculateReal.label");
-            calculateReal.translatedStringPowerGeneration = mrc.bundle.getString("powerGeneration");
-
-            calculateMax.translatedStringLabel = mrc.bundle.getString("calculateMaximum") + "\n[orange]=========================[white]";
+            calculator.translatedStringRealTitle = mrc.bundle.getString("calculateReal") + mrc.bundle.getString("calculateReal.label");
+            calculator.translatedStringPowerGeneration = mrc.bundle.getString("powerGeneration");
+            calculator.translatedStringMaxTitle = mrc.bundle.getString("calculateMaximum") + "\n[orange]=========================[white]";
 
             //add setting to core bundle
             var coreBundle = Core.bundle.getProperties();
@@ -102,22 +101,20 @@ public class mrc extends Mod {
             Menus.registerMenu(69420, (player, selection) -> {
                 if (selection < 0) return;
                 if (selection < 16) {
-                    //calculate Real but don't limit selected Item
+                    //todo calculate Real but don't limit selected Item
                 } else {
-                    calculation cal = null;
+                    calculator cal = null;
                     switch (selection) {
                         case 16 -> {
                             try {
-                                cal = new calculateMax(x1, y1, x2, y2);
-                                cal.calculate();
+                                cal = new calculator(x1, y1, x2, y2, false);
                             } catch (Exception e) {
                                 Log.err(e);
                             }
                         }
                         case 17 -> {
                             try {
-                                cal = new calculateReal(x1, y1, x2, y2);
-                                cal.calculate();
+                                cal = new calculator(x1, y1, x2, y2, true);
                             } catch (Exception e) {
                                 Log.err(e);
                             }
@@ -219,34 +216,6 @@ public class mrc extends Mod {
 
     private static void drawSelected(int x, int y, Block block, Color color) {
         Drawf.selected(x, y, block, color);
-    }
-
-    public static class calculation {
-        public final int xl;
-        public final int xr;
-        public final int yb;
-        public final int yt;
-
-        public String formattedMessage = "";
-
-        public calculation(int x1, int y1, int x2, int y2) {
-            xl = Math.min(x1, x2);
-            xr = Math.max(x1, x2);
-            yb = Math.min(y1, y2);
-            yt = Math.max(y1, y2);
-        }
-
-        public void calculate() {
-
-        }
-
-        public void callLabel() {
-            Menus.label(formattedMessage, 30, (xl + xr) * 4f, (yb - 5) * 8f);
-        }
-
-        public void callInfoMessage() {
-            Vars.ui.showInfo(formattedMessage);
-        }
     }
 
     public static void addBooleanGameSetting(String key, boolean defaultBooleanValue){

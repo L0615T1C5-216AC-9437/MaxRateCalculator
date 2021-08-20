@@ -2,19 +2,25 @@ package maximus;
 
 import arc.Core;
 import arc.graphics.Color;
+import arc.struct.ObjectMap;
 import arc.struct.Seq;
 import arc.util.Log;
 import arc.util.Nullable;
 import mindustry.Vars;
+import mindustry.content.Liquids;
+import mindustry.entities.bullet.BulletType;
 import mindustry.gen.Building;
 import mindustry.gen.Iconc;
 import mindustry.type.*;
+import mindustry.ui.Menus;
 import mindustry.world.Tile;
 import mindustry.world.blocks.defense.MendProjector;
 import mindustry.world.blocks.defense.OverdriveProjector;
+import mindustry.world.blocks.defense.turrets.*;
 import mindustry.world.blocks.power.*;
 import mindustry.world.blocks.production.*;
 import mindustry.world.blocks.units.Reconstructor;
+import mindustry.world.blocks.units.RepairPoint;
 import mindustry.world.blocks.units.UnitFactory;
 import mindustry.world.consumers.ConsumeItems;
 import mindustry.world.consumers.ConsumeLiquid;
@@ -30,26 +36,35 @@ import static maximus.mrc.translatedStringOptional;
 import static maximus.mrc.translatedStringPower;
 import static mindustry.Vars.world;
 
-public class calculateReal extends mrc.calculation {
+public class calculator {
+    public String formattedMessage = "";
+    //
+    public final int xl;
+    public final int xr;
+    public final int yb;
+    public final int yt;
+    public final boolean rateLimit;
+    //
     private final ArrayList<pc> apc = new ArrayList<>();
     private Item bestFlammableFuel = null;
     private Item bestRadioactiveFuel = null;
     //
-    public static String translatedStringLabel = "";
+    public static String translatedStringMaxTitle = "";
+    public static String translatedStringRealTitle = "";
     public static String translatedStringPowerGeneration = "";
     //old
-    public final HashMap<Item, List<pcEntry>> itemPC ;
+    public final HashMap<Item, List<pcEntry>> itemPC;
 
-    public calculateReal(int x1, int y1, int x2, int y2) throws Exception {
-        super(x1, y1, x2, y2);
-
+    public calculator(int x1, int y1, int x2, int y2, boolean rateLimit) throws Exception {
+        xl = Math.min(x1, x2);
+        xr = Math.max(x1, x2);
+        yb = Math.min(y1, y2);
+        yt = Math.max(y1, y2);
+        this.rateLimit = rateLimit;
         itemPC = new HashMap<>();
 
         if (xl < 0 || yb < 0 || xr > Vars.world.width() || yt > Vars.world.height()) throw new Exception("Invalid Coordinates");
-    }
 
-    @Override
-    public void calculate() {
         ArrayList<Building> repeat = new ArrayList<>();
         for (int x = xl; x <= xr; x++) {
             for (int y = yb; y <= yt; y++) {
@@ -73,7 +88,7 @@ public class calculateReal extends mrc.calculation {
                 if (t.block() instanceof Drill d && t.build instanceof Drill.DrillBuild db) {
                     if (db.dominantItems > 0) {
                         float boost = db.liquids.total() > 0 ? d.liquidBoostIntensity * d.liquidBoostIntensity : 1f;
-                        if (boost == 1f) {
+                        if (rateLimit && boost == 1f) {
                             pc.liquidUsage = null;
                             pc.liquidProductionRate = 0;
                         }
@@ -208,14 +223,51 @@ public class calculateReal extends mrc.calculation {
                         pc.rate = 3600f / r.constructTime;
                     }
                 }
+                //weapons
+                if (t.block() instanceof ReloadTurret rt) {
+                    pc.rate = 60f / rt.reloadTime;
+                }
+                if (t.block() instanceof Turret turret && t.build instanceof Turret.TurretBuild tb) {
+                    if (tb.liquids.total() > 0) { //calculate liquid buff if has liquid
+                        pc.liquidUsage = tb.liquids.current(); //current coolant
+                        pc.liquidUsageRate = turret.coolantUsage * 60f; //liquid/s
+                        pc.rate *= 1 + (turret.coolantUsage * tb.liquids.current().heatCapacity * turret.coolantMultiplier); //buff rate by liquid calculation
+                    } else if (t.block() instanceof LaserTurret || !rateLimit) { //if calculate max flag for buff
+                        pc.liquidUsageRate = turret.coolantUsage * 60f; //liquid/s
+                    }
+                }
+                if (t.block() instanceof ItemTurret it) {
+                    pc.ammoTypes = it.ammoTypes;
+                    pc.rate *= it.burstSpacing > 0.0001f ? it.shots : it.ammoPerShot; //burst uses ammo per shot, everything else is per firing.
+
+                    if (t.build instanceof ItemTurret.ItemTurretBuild itb && !itb.ammo.isEmpty()) {
+                        var bt = itb.peekAmmo();
+                        for (Item item : it.ammoTypes.keys()) {
+                            if (bt == it.ammoTypes.get(item)) {
+                                pc.materials = new items[] { new items(item, 1) };
+                                pc.rate /= bt.ammoMultiplier;
+                                pc.rate *= bt.reloadMultiplier;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (t.block() instanceof BaseTurret bt) {
+                    pc.coolantMultiplier = bt.coolantMultiplier;
+                }
+                if (t.block() instanceof RepairPoint rp) {
+                    pc.liquidUsageRate = rp.coolantUse * 60f;
+                    pc.coolantMultiplier = rp.coolantMultiplier;
+                }
                 //misc.
                 if (t.block() instanceof OverdriveProjector op) {
                     if (op.consumes.has(ConsumeType.item) && op.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                        itemConsumption(ci.items, op.useTime, ci.optional);
+                        itemConsumption(ci.items, op.useTime, !rateLimit || ci.optional);
                     }
                 } else if (t.block() instanceof MendProjector mp) {
                     if (mp.consumes.has(ConsumeType.item) && mp.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
-                        itemConsumption(ci.items, mp.useTime, ci.optional);
+                        itemConsumption(ci.items, mp.useTime, !rateLimit || ci.optional);
                     }
                 }
                 apc.add(pc);
@@ -223,7 +275,11 @@ public class calculateReal extends mrc.calculation {
             }
         }
 
-        normalizeRates();
+        if (rateLimit) {
+            normalizeRates();
+        } else {
+            getSD();
+        }
 
         HashMap<Object, finalAverages> isd = new HashMap<>();
         float powerAverageP = 0f;
@@ -292,7 +348,8 @@ public class calculateReal extends mrc.calculation {
         });
 
         DecimalFormat df = new DecimalFormat("0.00");
-        StringBuilder builder = new StringBuilder(translatedStringLabel);
+        String title = rateLimit ? translatedStringRealTitle : translatedStringMaxTitle;
+        StringBuilder builder = new StringBuilder(title);
         for (Object o : isd.keySet()) {
             finalAverages averages = isd.get(o);
             String emoji = "";
@@ -311,7 +368,11 @@ public class calculateReal extends mrc.calculation {
                 name = unit.name;
                 color = Color.white + "";
             }
-            builder.append("\n[white]([lightgray]").append(df.format((averages.efficiencies / averages.machines) * 100f)).append("%[white]) ").append(emoji).append("[#").append(color).append("]").append(name).append(" :");
+            builder.append("\n[white]");
+            if (rateLimit) {
+                builder.append("([lightgray]").append(df.format((averages.efficiencies / averages.machines) * 100f)).append("%[white]) ");
+            }
+            builder.append(emoji).append("[#").append(color).append("]").append(name).append(" :");
             float difference = averages.production - averages.consumption;
             if (0.001f > difference && difference > -0.001f) difference = 0f;
             if (averages.production > 0 || averages.consumption > 0) builder.append(difference == 0f ? " [lightgray]" : difference < 0 ? " [scarlet]" : " [lime]+").append(df.format(difference));
@@ -326,7 +387,7 @@ public class calculateReal extends mrc.calculation {
             if (powerAverageP > 0 && powerAverageN < 0) builder.append(" [white]= [lime]+").append(df.format(powerAverageP)).append(" [white]").append(powerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(powerAverageN));
         }
 
-        if (!builder.toString().equals(translatedStringLabel)) formattedMessage = builder.toString();
+        if (!builder.toString().equals(title)) formattedMessage = builder.toString();
     }
 
     private static class pcEntry {
@@ -349,11 +410,6 @@ public class calculateReal extends mrc.calculation {
         public float efficiencies = 0;
         public int machines = 0;
 
-        public finalAverages(float production, float consumption, float consumptionOptional) {
-            this.production = production;
-            this.consumption = consumption;
-            this.consumptionOptional = consumptionOptional;
-        }
 
         public finalAverages() {
             production = 0;
@@ -383,6 +439,9 @@ public class calculateReal extends mrc.calculation {
 
         public boolean usesFlammableItem;
         public boolean usesRadioactiveItem;
+
+        public ObjectMap<Item, BulletType> ammoTypes;
+        public float coolantMultiplier;
 
         public float powerConsumption;
         public float powerProduction;
@@ -514,6 +573,7 @@ public class calculateReal extends mrc.calculation {
         float flammableFuelDemand = 0f;
         float radioactiveFuelDemand = 0f;
         HashMap<UnitType, UnitType> reconstructorUpgrades = new HashMap<>();
+        ArrayList<pc> turrets = new ArrayList<>();
         for (pc pc : apc) {
             if (pc.products != null) for (items is : pc.products) {
                 isd.putIfAbsent(is.item, new sd());
@@ -549,6 +609,11 @@ public class calculateReal extends mrc.calculation {
             }
             if (pc.usesRadioactiveItem && pc.materials == null) {
                 radioactiveFuelDemand += (pc.rate * pc.efficiency);
+            }
+            if (pc.ammoTypes != null && pc.materials == null) {
+                turrets.add(pc);
+            } else if (pc.liquidUsageRate > 0f && pc.coolantMultiplier > 0f && pc.liquidUsage == null) {
+                turrets.add(pc);
             }
         }
         //
@@ -636,6 +701,62 @@ public class calculateReal extends mrc.calculation {
                 }
             }
         }
+        if (!turrets.isEmpty()) {
+            Liquid bestCoolant = null;
+            float maxHeatCapacity = -1f;
+            for (Object o : isd.keySet()) {
+                if (o instanceof Liquid l) {
+                    if (l.heatCapacity > maxHeatCapacity) {
+                        bestCoolant = l;
+                        maxHeatCapacity = l.heatCapacity;
+                    }
+                }
+            }
+            if (bestCoolant == null && !rateLimit) {
+                //imagine cryofluid is available when calculating max and no other coolant is produced locally
+                bestCoolant = Liquids.cryofluid;
+                maxHeatCapacity = Liquids.cryofluid.heatCapacity;
+            }
+
+            for (pc pc : turrets) {
+                if (pc.materials == null && pc.ammoTypes != null) { //if no ammo is loaded and uses ammo
+                    for (Item item : pc.ammoTypes.keys()) { //will use item that's being produced/consumed
+                        if (isd.containsKey(item)) {
+                            pc.materials = new items[]{new items(item, 1)};
+                            //no `break;` here so it prefers items further down the list (normally better ammo)
+                        }
+                    }
+
+                    if (pc.materials == null) {
+                        //get best ammo if no ammo is locally produced/used
+                        for (Item item : pc.ammoTypes.keys()) { //shit implementation
+                            pc.materials = new items[] { new items(item, 1) };
+                        }
+                    }
+
+                    if (pc.materials != null) {
+                        var bt = pc.ammoTypes.get(pc.materials[0].item);
+                        pc.rate /= bt.ammoMultiplier;
+                        pc.rate *= bt.reloadMultiplier;
+                    }
+                }
+
+                if (pc.liquidUsage == null && bestCoolant != null && pc.liquidUsageRate > 0f) { //should only happen on calculate max or repair point
+                    pc.liquidUsage = bestCoolant;
+                    pc.rate *= 1 + ((pc.liquidUsageRate / 60f) * maxHeatCapacity * pc.coolantMultiplier); //buff rate by liquid calculation
+                }
+
+                //add consumptions
+                if (pc.materials != null) {
+                    isd.putIfAbsent(pc.materials[0], new sd());
+                    isd.get(pc.materials[0]).demand += (pc.rate * pc.efficiency);
+                }
+                if (pc.liquidUsage != null) {
+                    isd.putIfAbsent(pc.liquidUsage, new sd());
+                    isd.get(pc.liquidUsage).demand += (pc.liquidUsageRate * pc.efficiency);
+                }
+            }
+        }
 
         return isd;
     }
@@ -645,5 +766,13 @@ public class calculateReal extends mrc.calculation {
             itemPC.putIfAbsent(is.item, new ArrayList<>());
             itemPC.get(is.item).add(new pcEntry(0, is.amount / (interval / 60f), optional));
         }
+    }
+
+    public void callLabel() {
+        Menus.label(formattedMessage, 30, (xl + xr) * 4f, (yb - 5) * 8f);
+    }
+
+    public void callInfoMessage() {
+        Vars.ui.showInfo(formattedMessage);
     }
 }
