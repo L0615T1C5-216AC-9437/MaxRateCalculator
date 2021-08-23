@@ -212,7 +212,7 @@ public class calculator {
                         UnitFactory.UnitPlan up = uf.plans.get(ufb.currentPlan);
                         pc.unitProduct = up.unit;
                         pc.materials = IStoItems(up.requirements);
-                        pc.rate = 3600f / up.time;
+                        pc.rate = 60f / up.time;
                     }
                 }
                 if (t.block() instanceof Reconstructor r) {
@@ -220,7 +220,7 @@ public class calculator {
                     pc.upgrades = r.upgrades;
                     if (r.consumes.has(ConsumeType.item) && r.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
                         pc.materials = IStoItems(ci.items);
-                        pc.rate = 3600f / r.constructTime;
+                        pc.rate = 60f / r.constructTime;
                     }
                 }
                 //weapons
@@ -374,6 +374,7 @@ public class calculator {
             }
             builder.append(emoji).append("[#").append(color).append("]").append(name).append(" :");
             float difference = averages.production - averages.consumption;
+            if (o instanceof UnitType) difference *= 60f;
             if (0.001f > difference && difference > -0.001f) difference = 0f;
             if (averages.production > 0 || averages.consumption > 0) builder.append(difference == 0f ? " [lightgray]" : difference < 0 ? " [scarlet]" : " [lime]+").append(df.format(difference));
             if ((Core.settings.getBool("mrcShowZeroAverageMath", true) || difference != 0f) && averages.production > 0 && averages.consumption > 0) builder.append(" [white]= [lime]+").append(df.format(averages.production)).append(" [white]+ [scarlet]-").append(df.format(averages.consumption));
