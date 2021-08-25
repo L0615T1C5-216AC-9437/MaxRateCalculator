@@ -167,6 +167,11 @@ public class calculator {
                 if (t.block() instanceof PowerGenerator pg) {
                     pc.powerProduction = pg.powerProduction * 60f;
                 }
+                if (t.block() instanceof  ThermalGenerator tg) {
+                    Tile tile = t.build.tile; //get origin block
+                    float efficiency = tg.sumAttribute(tg.attribute, tile.x, tile.y);
+                    pc.powerProduction *= efficiency;
+                }
                 //crafting
                 if (t.block() instanceof GenericCrafter gc) {
                     if (gc.outputItems != null) {
