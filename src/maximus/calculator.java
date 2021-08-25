@@ -262,8 +262,10 @@ public class calculator {
                     pc.coolantMultiplier = bt.coolantMultiplier;
                 }
                 if (t.block() instanceof RepairPoint rp) {
-                    pc.liquidUsageRate = rp.coolantUse * 60f;
-                    pc.coolantMultiplier = rp.coolantMultiplier;
+                    if (rp.acceptCoolant) {
+                        pc.liquidUsageRate = rp.coolantUse * 60f;
+                        pc.coolantMultiplier = rp.coolantMultiplier;
+                    }
                 }
                 //misc.
                 if (t.block() instanceof OverdriveProjector op) {
