@@ -562,10 +562,12 @@ public class calculator {
 
     private HashMap<Object, Float> getPCRatio() {
         HashMap<Object, Float> pcr = new HashMap<>();
-        getSD().forEach((item, sd) -> {
-            if (sd.demand > 0) {
+        getSD().forEach((object, sd) -> {
+            if (sd.supply > 0 && sd.demand > 0) {
                 float ratio = sd.supply / sd.demand;
-                if ( !(1.001f > ratio && ratio > 0.999f) && ratio > 0f) pcr.put(item, ratio); //don't attempt to fix if perfect or 0.001% off
+                if (!(1.00001f > ratio && ratio > 0.99999f)) { //don't attempt to fix if perfect or 0.001% off
+                    pcr.put(object, ratio);
+                }
             }
         });
         return pcr;
