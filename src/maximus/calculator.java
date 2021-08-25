@@ -711,7 +711,7 @@ public class calculator {
             float maxHeatCapacity = -1f;
             for (Object o : isd.keySet()) {
                 if (o instanceof Liquid l) {
-                    if (l.heatCapacity > maxHeatCapacity) {
+                    if (l.flammability == 0f && l.heatCapacity > maxHeatCapacity) {
                         bestCoolant = l;
                         maxHeatCapacity = l.heatCapacity;
                     }
