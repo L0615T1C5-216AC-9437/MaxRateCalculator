@@ -321,9 +321,9 @@ public class calculator {
                 fa.maxProduction += pc.rate;
                 fa.production += (pc.rate * pc.efficiency);
             }
-            if (pc.unitUsed != null) {
-                isd.putIfAbsent(pc.unitUsed, new finalAverages());
-                isd.get(pc.unitUsed).consumption += (pc.rate * pc.efficiency);
+            if (pc.unitUsage != null) {
+                isd.putIfAbsent(pc.unitUsage, new finalAverages());
+                isd.get(pc.unitUsage).consumption += (pc.rate * pc.efficiency);
             }
 
             if (pc.powerProduction > 0) {
@@ -436,7 +436,7 @@ public class calculator {
         public float liquidProductionRate;
         @Nullable
         public UnitType unitProduct;
-        public UnitType unitUsed;
+        public UnitType unitUsage;
         public boolean isReconstructor;
         public Seq<UnitType[]> upgrades;
 
@@ -478,45 +478,44 @@ public class calculator {
     }
 
     private void normalizeRates() {
-        boolean finalResult = false;
-        for (int i = 0; i < 30 && !finalResult; i++) { //tried while loop but it sucks ass
-            if (i == 29) Log.err(mrc.bundle.getString("calculateReal.tookTooLong"));
+        for (int i = 0; i < 60; i++) {
+            if (i == 59) Log.err(mrc.bundle.getString("calculateReal.tookTooLong"));
             HashMap<Object, Float> pcr = getPCRatio();
             if (!pcr.isEmpty()) {
                 float max = -1;
-                Object maxItem = null;
-                for (Object item : pcr.keySet()) {
-                    float ratio = pcr.get(item);
-                    if (ratio > max) {
-                        maxItem = item;
+                Object maxObject = null;
+                for (Object object : pcr.keySet()) {
+                    float ratio = pcr.get(object);
+                    if (!(1.00001f > ratio && ratio > 0.99999f) && ratio > max) {
+                        maxObject = object;
                         max = ratio;
                     }
                 }
-                if (maxItem != null) {
+                if (maxObject != null) {
                     if (max != 0 && max < 1f) {
                         //go through all consumptions. whatever consumes the under-produced item gets slowed down enough to meet production
-                        if (maxItem instanceof Item maximum) {
+                        if (maxObject instanceof Item item) {
                             for (pc pc : apc) {
                                 if (pc.materials != null) {
                                     for (items is : pc.materials) {
-                                        if (is.item == maximum) {
+                                        if (is.item == item) {
                                             pc.efficiency *= max;
                                         }
                                     }
                                 }
                             }
-                        } else if (maxItem instanceof Liquid maximum) {
+                        } else if (maxObject instanceof Liquid liquid) {
                             for (pc pc : apc) {
                                 if (pc.liquidUsage != null) {
-                                    if (pc.liquidUsage == maximum) {
+                                    if (pc.liquidUsage == liquid) {
                                         pc.efficiency *= max;
                                     }
                                 }
                             }
-                        } else if (maxItem instanceof UnitType maximum) {
+                        } else if (maxObject instanceof UnitType unit) {
                             for (pc pc : apc) {
-                                if (pc.unitUsed != null) {
-                                    if (pc.unitUsed == maximum) {
+                                if (pc.unitUsage != null) {
+                                    if (pc.unitUsage == unit) {
                                         pc.efficiency *= max;
                                     }
                                 }
@@ -525,7 +524,7 @@ public class calculator {
                     } else if (max > 1f) {
                         float ratio = 1f / max;
                         //go through all production. whatever produces the overproduced item gets slowed down enough to meet demand
-                        if (maxItem instanceof Item item) {
+                        if (maxObject instanceof Item item) {
                             for (pc pc : apc) {
                                 if (pc.products != null) {
                                     for (items is : pc.products) {
@@ -535,7 +534,7 @@ public class calculator {
                                     }
                                 }
                             }
-                        } else if (maxItem instanceof Liquid liquid) {
+                        } else if (maxObject instanceof Liquid liquid) {
                             for (pc pc : apc) {
                                 if (pc.liquidProduct != null) {
                                     if (pc.liquidProduct == liquid) {
@@ -543,7 +542,7 @@ public class calculator {
                                     }
                                 }
                             }
-                        } else if (maxItem instanceof UnitType unit) {
+                        } else if (maxObject instanceof UnitType unit) {
                             for (pc pc : apc) {
                                 if (pc.unitProduct != null) {
                                     if (pc.unitProduct == unit) {
@@ -555,7 +554,28 @@ public class calculator {
                     }
                 }
             } else {
-                finalResult = true;
+                float closest = 1f;
+                var sdhr = getSD();
+                var sdhm = getMaxSD();
+                for (Object o : sdhm.keySet()) {
+                    sd sdm = sdhm.get(o);
+                    sd sdr = sdhr.get(o);
+                    float max = sdm.supply;
+                    float real = sdr.supply;
+                    float proximity = (max - real) / max;
+                    if (proximity < closest) {
+                        closest = proximity;
+                    }
+                }
+
+                if (0.00001f > closest && closest > -0.00001f) {
+                    break;
+                } else if (closest > 0) {
+                    float fix = 1 / (1 - closest);
+                    for (pc pc : apc) {
+                        pc.efficiency = Math.min(1f, pc.efficiency * fix);
+                    }
+                }
             }
         }
     }
@@ -600,11 +620,11 @@ public class calculator {
                 isd.putIfAbsent(pc.unitProduct, new sd());
                 isd.get(pc.unitProduct).supply += (pc.rate * pc.efficiency);
             }
-            if (pc.unitUsed != null) {
-                isd.putIfAbsent(pc.unitUsed, new sd());
-                isd.get(pc.unitUsed).demand += (pc.rate * pc.efficiency);
+            if (pc.unitUsage != null) {
+                isd.putIfAbsent(pc.unitUsage, new sd());
+                isd.get(pc.unitUsage).demand += (pc.rate * pc.efficiency);
             }
-            if (pc.isReconstructor && pc.upgrades != null && pc.unitUsed == null) {
+            if (pc.isReconstructor && pc.upgrades != null && pc.unitUsage == null) {
                 for (UnitType[] upgrade : pc.upgrades) {
                     reconstructorUpgrades.put(upgrade[0], upgrade[1]);
                 }
@@ -651,7 +671,7 @@ public class calculator {
                                 isd.get(a).demand += pc.rate;
                                 isd.get(b).supply += pc.rate;
 
-                                pc.unitUsed = a;
+                                pc.unitUsage = a;
                                 pc.unitProduct = b;
                                 break;
                             }
@@ -759,6 +779,198 @@ public class calculator {
                 if (pc.liquidUsage != null) {
                     isd.putIfAbsent(pc.liquidUsage, new sd());
                     isd.get(pc.liquidUsage).demand += (pc.liquidUsageRate * pc.efficiency);
+                }
+            }
+        }
+
+        return isd;
+    }
+    private HashMap<Object, sd> getMaxSD() {
+        HashMap<Object, sd> isd = new HashMap<>();
+        float flammableFuelDemand = 0f;
+        float radioactiveFuelDemand = 0f;
+        HashMap<UnitType, UnitType> reconstructorUpgrades = new HashMap<>();
+        ArrayList<pc> turrets = new ArrayList<>();
+        for (pc pc : apc) {
+            if (pc.products != null) for (items is : pc.products) {
+                isd.putIfAbsent(is.item, new sd());
+                isd.get(is.item).supply += (is.amount * pc.rate);
+            }
+            if (pc.materials != null) for (items is : pc.materials) {
+                isd.putIfAbsent(is.item, new sd());
+                isd.get(is.item).demand += (is.amount * pc.rate);
+            }
+            if (pc.liquidProduct != null) {
+                isd.putIfAbsent(pc.liquidProduct, new sd());
+                isd.get(pc.liquidProduct).supply += (pc.liquidProductionRate);
+            }
+            if (pc.liquidUsage != null) {
+                isd.putIfAbsent(pc.liquidUsage, new sd());
+                isd.get(pc.liquidUsage).demand += (pc.liquidUsageRate);
+            }
+            if (pc.unitProduct != null) {
+                isd.putIfAbsent(pc.unitProduct, new sd());
+                isd.get(pc.unitProduct).supply += (pc.rate);
+            }
+            if (pc.unitUsage != null) {
+                isd.putIfAbsent(pc.unitUsage, new sd());
+                isd.get(pc.unitUsage).demand += (pc.rate);
+            }
+            if (pc.isReconstructor && pc.upgrades != null && pc.unitUsage == null) {
+                for (UnitType[] upgrade : pc.upgrades) {
+                    reconstructorUpgrades.put(upgrade[0], upgrade[1]);
+                }
+            }
+            if (pc.usesFlammableItem && pc.materials == null) {
+                flammableFuelDemand += (pc.rate);
+            }
+            if (pc.usesRadioactiveItem && pc.materials == null) {
+                radioactiveFuelDemand += (pc.rate);
+            }
+            if (pc.ammoTypes != null && pc.materials == null) {
+                turrets.add(pc);
+            } else if (pc.liquidUsageRate > 0f && pc.coolantMultiplier > 0f && pc.liquidUsage == null) {
+                turrets.add(pc);
+            }
+        }
+        //
+        if (!reconstructorUpgrades.isEmpty()) {
+            UnitType a = null;
+            UnitType b = null;
+            for (Object o : isd.keySet()) {
+                if (o instanceof UnitType unit) {
+                    if (reconstructorUpgrades.containsKey(unit)) {
+                        a = unit;
+                        b = reconstructorUpgrades.get(unit);
+                        break;
+                    }
+                }
+            }
+            if (a == null) {
+                for (UnitType c : reconstructorUpgrades.keySet()) {
+                    a = c;
+                    b = reconstructorUpgrades.get(c);
+                    break;
+                }
+            }
+            if (a != null && b != null) {
+                isd.putIfAbsent(a, new sd());
+                isd.putIfAbsent(b, new sd());
+                for (pc pc : apc) {
+                    if (pc.isReconstructor) {
+                        for (UnitType[] upgrade : pc.upgrades) {
+                            if (upgrade[0] == a) {
+                                isd.get(a).demand += pc.rate;
+                                isd.get(b).supply += pc.rate;
+
+                                pc.unitUsage = a;
+                                pc.unitProduct = b;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (flammableFuelDemand > 0f && bestFlammableFuel == null) {
+            float bestFlammability = -1;
+            Item bestFlammable = null;
+            for (Object o : isd.keySet()) { //will assume items being used for production can be used as fuel
+                if (o instanceof Item item) {
+                    if (item.flammability > 0f && item.flammability > bestFlammability && item.explosiveness < 0.5f) { //explosiveness over 0.5f can cause turbine damage depending on settings
+                        bestFlammable = item;
+                        bestFlammability = item.flammability;
+                    }
+                }
+            }
+            bestFlammableFuel = bestFlammable;
+        }
+        if (flammableFuelDemand > 0f && bestFlammableFuel != null) {
+            isd.putIfAbsent(bestFlammableFuel, new sd());
+            isd.get(bestFlammableFuel).demand += flammableFuelDemand;
+
+            for (pc pc : apc) {
+                if (pc.usesFlammableItem) {
+                    pc.materials = new items[] { new items(bestFlammableFuel, 1) };
+                }
+            }
+        }
+        if (radioactiveFuelDemand > 0f && bestRadioactiveFuel == null) {
+            float bestRadioactivity = -1;
+            Item bestRadioactive = null;
+            for (Object o : isd.keySet()) {
+                if (o instanceof Item item) {
+                    if (item.radioactivity > 0f && item.radioactivity > bestRadioactivity) { //explosiveness over 0.5f can cause turbine damage depending on settings
+                        bestRadioactive = item;
+                        bestRadioactivity = item.radioactivity;
+                    }
+                }
+            }
+            bestRadioactiveFuel = bestRadioactive;
+        }
+        if (radioactiveFuelDemand > 0f && bestRadioactiveFuel != null) {
+            isd.putIfAbsent(bestRadioactiveFuel, new sd());
+            isd.get(bestRadioactiveFuel).demand += radioactiveFuelDemand;
+
+            for (pc pc : apc) {
+                if (pc.usesRadioactiveItem) {
+                    pc.materials = new items[] { new items(bestRadioactiveFuel, 1) };
+                }
+            }
+        }
+        if (!turrets.isEmpty()) {
+            Liquid bestCoolant = null;
+            float maxHeatCapacity = -1f;
+            for (Object o : isd.keySet()) {
+                if (o instanceof Liquid l) {
+                    if (l.flammability == 0f && l.heatCapacity > maxHeatCapacity) {
+                        bestCoolant = l;
+                        maxHeatCapacity = l.heatCapacity;
+                    }
+                }
+            }
+            if (bestCoolant == null && !rateLimit) {
+                //imagine cryofluid is available when calculating max and no other coolant is produced locally
+                bestCoolant = Liquids.cryofluid;
+                maxHeatCapacity = Liquids.cryofluid.heatCapacity;
+            }
+
+            for (pc pc : turrets) {
+                if (pc.materials == null && pc.ammoTypes != null) { //if no ammo is loaded and uses ammo
+                    for (Item item : pc.ammoTypes.keys()) { //will use item that's being produced/consumed
+                        if (isd.containsKey(item)) {
+                            pc.materials = new items[]{new items(item, 1)};
+                            //no `break;` here so it prefers items further down the list (normally better ammo)
+                        }
+                    }
+
+                    if (pc.materials == null) {
+                        //get best ammo if no ammo is locally produced/used
+                        for (Item item : pc.ammoTypes.keys()) { //shit implementation
+                            pc.materials = new items[] { new items(item, 1) };
+                        }
+                    }
+
+                    if (pc.materials != null) {
+                        var bt = pc.ammoTypes.get(pc.materials[0].item);
+                        pc.rate /= bt.ammoMultiplier;
+                        pc.rate *= bt.reloadMultiplier;
+                    }
+                }
+
+                if (pc.liquidUsage == null && bestCoolant != null && pc.liquidUsageRate > 0f) { //should only happen on calculate max or repair point
+                    pc.liquidUsage = bestCoolant;
+                    pc.rate *= 1 + ((pc.liquidUsageRate / 60f) * maxHeatCapacity * pc.coolantMultiplier); //buff rate by liquid calculation
+                }
+
+                //add consumptions
+                if (pc.materials != null) {
+                    isd.putIfAbsent(pc.materials[0], new sd());
+                    isd.get(pc.materials[0]).demand += (pc.rate);
+                }
+                if (pc.liquidUsage != null) {
+                    isd.putIfAbsent(pc.liquidUsage, new sd());
+                    isd.get(pc.liquidUsage).demand += (pc.liquidUsageRate);
                 }
             }
         }
