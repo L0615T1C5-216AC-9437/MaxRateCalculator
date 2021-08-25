@@ -298,9 +298,8 @@ public class calculator {
             if (pc.products != null) for (items is : pc.products) {
                 isd.putIfAbsent(is.item, new finalAverages());
                 finalAverages fa = isd.get(is.item);
+                fa.maxProduction += is.amount * pc.rate;
                 fa.production += (is.amount * pc.rate * pc.efficiency);
-                fa.machines++;
-                fa.efficiencies += pc.efficiency;
             }
             if (pc.materials != null) for (items is : pc.materials) {
                 isd.putIfAbsent(is.item, new finalAverages());
@@ -309,9 +308,8 @@ public class calculator {
             if (pc.liquidProduct != null) {
                 isd.putIfAbsent(pc.liquidProduct, new finalAverages());
                 finalAverages fa = isd.get(pc.liquidProduct);
+                fa.maxProduction += pc.liquidProductionRate;
                 fa.production += (pc.liquidProductionRate * pc.efficiency);
-                fa.machines++;
-                fa.efficiencies += pc.efficiency;
             }
             if (pc.liquidUsage != null) {
                 isd.putIfAbsent(pc.liquidUsage, new finalAverages());
@@ -320,9 +318,8 @@ public class calculator {
             if (pc.unitProduct != null) {
                 isd.putIfAbsent(pc.unitProduct, new finalAverages());
                 finalAverages fa = isd.get(pc.unitProduct);
+                fa.maxProduction += pc.rate;
                 fa.production += (pc.rate * pc.efficiency);
-                fa.machines++;
-                fa.efficiencies += pc.efficiency;
             }
             if (pc.unitUsed != null) {
                 isd.putIfAbsent(pc.unitUsed, new finalAverages());
@@ -377,7 +374,7 @@ public class calculator {
             }
             builder.append("\n[white]");
             if (rateLimit) {
-                builder.append("([lightgray]").append(df.format((averages.efficiencies / averages.machines) * 100f)).append("%[white]) ");
+                builder.append("([lightgray]").append(df.format((averages.production / averages.maxProduction) * 100f)).append("%[white]) ");
             }
             builder.append(emoji).append("[#").append(color).append("]").append(name).append(" :");
             float difference = averages.production - averages.consumption;
@@ -412,11 +409,9 @@ public class calculator {
 
     private static class finalAverages {
         public float production;
+        public float maxProduction;
         public float consumption;
         public float consumptionOptional;
-
-        public float efficiencies = 0;
-        public int machines = 0;
 
 
         public finalAverages() {
