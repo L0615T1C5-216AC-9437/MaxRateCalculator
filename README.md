@@ -33,12 +33,12 @@ The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This 
 - Calculations with weapons will assume they are always shooting  
 
 **Calculate Real**  
-If a weapon does not have coolant, it will not boost or consume coolant, even if available.
-If a drill does not have coolant, it will not boost or consume coolant, even if available.
+- If a weapon does not have coolant, it will not boost or consume coolant, even if available.
+- If a drill does not have coolant, it will not boost or consume coolant, even if available.
 
 **Calculate Max**  
-If a weapon does not have coolant, it will use the best available coolant inside the selection area.  
-If no coolant is available inside the selection area, it will default to cryo-fluid.
+- If a weapon does not have coolant, it will use the best available coolant inside the selection area.  
+  If no coolant is available inside the selection area, it will default to cryo-fluid.
 
 ## Building Your own .Jar
 
