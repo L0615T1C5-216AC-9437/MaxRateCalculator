@@ -24,11 +24,21 @@ Manual Installation
    If you get a welcome message, the mod was successfully installed
 
 ## Usage
-The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This is done by pressing the \[ ` ~ ] button in your keyboard and selecting a area as if you were making a schematic.
-1. Press \[ ` ~ ] in your keyboard
+The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This is done by pressing the **\[ ` ~ ]** button in your keyboard and selecting a area as if you were making a schematic.
+1. Press **\[ ` ~ ]** in your keyboard
 2. Move your mouse
 3. Select what type of calculation you want (Max Rate, Real Rate, etc.)
 4. Profit.
+## Minutiae
+- Calculations with weapons will assume they are always shooting  
+
+**Calculate Real**  
+If a weapon does not have coolant, it will not boost or consume coolant, even if available.
+If a drill does not have coolant, it will not boost or consume coolant, even if available.
+
+**Calculate Max**  
+If a weapon does not have coolant, it will use the best available coolant inside the selection area.  
+If no coolant is available inside the selection area, it will default to cryo-fluid.
 
 ## Building Your own .Jar
 
@@ -38,7 +48,7 @@ The Max Rate is ran by selecting the are you want the mrc[1] to calculate. This 
 4. Your mod jar will be in the `build/libs` directory.
 
 ## Android?
-no.
+**no.**
 
 ## Supported Languages
 English (en)  
