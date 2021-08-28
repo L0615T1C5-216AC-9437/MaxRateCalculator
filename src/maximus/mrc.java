@@ -60,14 +60,12 @@ public class mrc extends Mod {
             if(loc.equals("default")){
                 locale = Locale.getDefault();
             }else{
-                Locale lastLocale;
                 if(loc.contains("_")){
                     String[] split = loc.split("_");
-                    lastLocale = new Locale(split[0], split[1]);
+                    locale = new Locale(split[0], split[1]);
                 }else{
-                    lastLocale = new Locale(loc);
+                    locale = new Locale(loc);
                 }
-                locale = lastLocale;
             }
             try {
                 bundle = ResourceBundle.getBundle("languagePack", locale);
