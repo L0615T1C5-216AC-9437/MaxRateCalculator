@@ -489,15 +489,15 @@ public class calculator {
     }
 
     private void normalizeRates() {
-        for (int i = 0; i < 60; i++) {
-            if (i == 59) Log.err(mrc.bundle.getString("calculateReal.tookTooLong"));
+        for (int i = 0; i < 500; i++) {
+            if (i == 499) Log.err(mrc.bundle.getString("calculateReal.tookTooLong"));
             HashMap<Object, Float> pcr = getPCRatio();
             if (!pcr.isEmpty()) {
                 float max = -1;
                 Object maxObject = null;
                 for (Object object : pcr.keySet()) {
                     float ratio = pcr.get(object);
-                    if (!(1.00001f > ratio && ratio > 0.99999f) && ratio > max) {
+                    if (ratio > max) {
                         maxObject = object;
                         max = ratio;
                     }
@@ -596,7 +596,7 @@ public class calculator {
         getSD().forEach((object, sd) -> {
             if (sd.supply > 0 && sd.demand > 0) {
                 float ratio = sd.supply / sd.demand;
-                if (!(1.00001f > ratio && ratio > 0.99999f)) { //don't attempt to fix if perfect or 0.001% off
+                if (1.00001f < ratio || ratio < 0.99999f) { //don't attempt to fix if perfect or 0.001% off
                     pcr.put(object, ratio);
                 }
             }
