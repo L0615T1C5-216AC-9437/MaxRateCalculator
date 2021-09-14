@@ -49,7 +49,7 @@ public class mrc extends Mod {
 
         //listen for game load event
         Events.run(Trigger.draw, () -> {
-            if (Core.input.keyDown(key) && x1 != -1 && y1 != -1) {
+            if (Vars.state.isPlaying() && Core.input.keyDown(key) && x1 != -1 && y1 != -1) {
                 drawSelection(x1, y1, tileX(Core.input.mouseX()), tileY(Core.input.mouseY()));
             }
         });
@@ -138,17 +138,19 @@ public class mrc extends Mod {
             }
         });
         Events.run(EventType.Trigger.update, () -> {
-            int rawCursorX = World.toTile(Core.input.mouseWorld().x), rawCursorY = World.toTile(Core.input.mouseWorld().y);
+            if (Vars.state.isPlaying() && !Vars.ui.chatfrag.shown()) {
+                int rawCursorX = World.toTile(Core.input.mouseWorld().x), rawCursorY = World.toTile(Core.input.mouseWorld().y);
 
-            if (Core.input.keyTap(key)) {
-                x1 = rawCursorX;
-                y1 = rawCursorY;
-            }
-            if (Core.input.keyRelease(key) && x1 != -1 && y1 != -1) {
-                x2 = rawCursorX;
-                y2 = rawCursorY;
-                Menus.menu(69420, menuTitle, menuDescription, buttons);
-                //calculate(x1, y1, rawCursorX, rawCursorY);
+                if (Core.input.keyTap(key)) {
+                    x1 = rawCursorX;
+                    y1 = rawCursorY;
+                }
+                if (Core.input.keyRelease(key) && x1 != -1 && y1 != -1) {
+                    x2 = rawCursorX;
+                    y2 = rawCursorY;
+                    Menus.menu(69420, menuTitle, menuDescription, buttons);
+                    //calculate(x1, y1, rawCursorX, rawCursorY);
+                }
             }
         });
     }
