@@ -7,6 +7,9 @@ import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
 import arc.graphics.g2d.Lines;
 import arc.input.KeyCode;
+import arc.scene.event.InputEvent;
+import arc.scene.event.InputListener;
+import arc.scene.ui.Dialog;
 import arc.util.Log;
 import mindustry.Vars;
 import mindustry.content.Blocks;
@@ -31,11 +34,11 @@ import static mindustry.Vars.player;
 import static mindustry.Vars.world;
 
 public class mrc extends Mod {
-    private static final KeyCode key = KeyCode.backtick;
+    private static KeyCode key = KeyCode.backtick;
     private static final int maxSelection = 500;
     public static ResourceBundle bundle;
     //menu
-    private static String[][] buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\nCalculate Maximum\nCalculate Real");
+    private static String[][] buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\nCalculate Maximum\nCalculate Real\nChange Key Bind");
     public static String menuTitle = "";
     public static String menuDescription = "";
     //translations
@@ -76,7 +79,7 @@ public class mrc extends Mod {
             //setup
             menuTitle = bundle.getString("mrc.mrc");
             menuDescription = bundle.getString("mrc.menuDescription");
-            buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\n" + bundle.getString("calculateMaximum") + "\n" + bundle.getString("calculateReal"));
+            buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\n" + bundle.getString("calculateMaximum") + "\n" + bundle.getString("calculateReal") + "\n" + bundle.getString("changeKeyBind"));
 
             translatedStringPower = Core.bundle.get("bar.power");
             translatedStringOptional = mrc.bundle.getString("optional");
@@ -85,13 +88,20 @@ public class mrc extends Mod {
             calculator.translatedStringPowerGeneration = mrc.bundle.getString("powerGeneration");
             calculator.translatedStringMaxTitle = mrc.bundle.getString("calculateMaximum") + "\n[orange]=========================[white]";
 
+            for (KeyCode kc : KeyCode.all) { //this is probably a terrible implementation of custom key binds
+                if (kc.value.equalsIgnoreCase(settings.getString("mrcKey", "`"))) {
+                    key = kc;
+                    break;
+                }
+            }
+
             //add setting to core bundle
             var coreBundle = Core.bundle.getProperties();
             coreBundle.put("setting.mrcSendInfoMessage.name", mrc.bundle.getString("mrc.settings.SendInfoMessage"));
             coreBundle.put("setting.mrcShowZeroAverageMath.name", mrc.bundle.getString("mrc.settings.ShowZeroAverageMath"));
             Core.bundle.setProperties(coreBundle);
             //add custom settings
-            Core.settings.put("uiscalechanged", false);//stop annoying "ui scale changed" message
+            settings.put("uiscalechanged", false);//stop annoying "ui scale changed" message
             addBooleanGameSetting("mrcSendInfoMessage", false);
             addBooleanGameSetting("mrcShowZeroAverageMath", true);
 
@@ -117,6 +127,32 @@ public class mrc extends Mod {
                                 Log.err(e);
                             }
                         }
+                        case 18 -> Vars.ui.showConfirm("Do you want to rebind Max Rate Calculator?", () -> {
+                            Dialog dialog = new Dialog(Core.bundle.get("keybind.press", "Press a key..."));
+                            dialog.titleTable.getCells().first().pad(4);
+                            dialog.addListener(new InputListener(){
+                                @Override
+                                public boolean touchDown(InputEvent event, float x, float y, int pointer, KeyCode keycode){
+                                    if(keycode == KeyCode.escape) return false;
+                                    key = keycode;
+                                    settings.put("mrcKey", key.value);
+                                    Vars.ui.showInfo("Max Rate Calculator Key set to " + key.value);
+                                    dialog.hide();
+                                    return false;
+                                }
+
+                                @Override
+                                public boolean keyDown(InputEvent event, KeyCode keycode){
+                                    if(keycode == KeyCode.escape) return false;
+                                    key = keycode;
+                                    settings.put("mrcKey", key.value);
+                                    Vars.ui.showInfo("Max Rate Calculator Key set to " + key.value);
+                                    dialog.hide();
+                                    return false;
+                                }
+                            });
+                            dialog.show();
+                        });
                     }
                     if (cal != null && !cal.formattedMessage.isEmpty()) {
                         if (settings.getBool("mrcSendInfoMessage", false)) {
@@ -131,10 +167,10 @@ public class mrc extends Mod {
                 x2 = -1;
                 y2 = -1;
             });
-            if (!Core.settings.has("mrcFirstTime")) {
+            if (!settings.has("mrcFirstTime")) {
                 Menus.infoMessage(bundle.getString("mrc.firstTimeMessage"));
-                Core.settings.put("mrcFirstTime", false);
-                Core.settings.forceSave();
+                settings.put("mrcFirstTime", false);
+                settings.forceSave();
             }
         });
         Events.run(EventType.Trigger.update, () -> {
@@ -219,6 +255,6 @@ public class mrc extends Mod {
     }
 
     public static void addBooleanGameSetting(String key, boolean defaultBooleanValue){
-        Vars.ui.settings.game.checkPref(key, Core.settings.getBool(key, defaultBooleanValue));
+        Vars.ui.settings.game.checkPref(key, settings.getBool(key, defaultBooleanValue));
     }
 }
