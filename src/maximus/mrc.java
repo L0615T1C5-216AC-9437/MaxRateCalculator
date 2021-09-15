@@ -138,7 +138,7 @@ public class mrc extends Mod {
             }
         });
         Events.run(EventType.Trigger.update, () -> {
-            if (Vars.state.isPlaying() && !Vars.ui.chatfrag.shown()) {
+            if (Vars.state.isPlaying() && !Vars.ui.chatfrag.shown() && !Core.scene.hasDialog()) {
                 int rawCursorX = World.toTile(Core.input.mouseWorld().x), rawCursorY = World.toTile(Core.input.mouseWorld().y);
 
                 if (Core.input.keyTap(key)) {
