@@ -14,6 +14,7 @@ import arc.util.Log;
 import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.core.World;
+import mindustry.ctype.ContentList;
 import mindustry.game.EventType;
 import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.game.EventType.Trigger;
@@ -41,6 +42,7 @@ public class mrc extends Mod {
     private static String[][] buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\nCalculate Maximum\nCalculate Real\nChange Key Bind");
     public static String menuTitle = "";
     public static String menuDescription = "";
+    private static int menuID;
     //translations
     public static String translatedStringPower = "";
     public static String translatedStringOptional = "";
@@ -106,7 +108,7 @@ public class mrc extends Mod {
             addBooleanGameSetting("mrcShowZeroAverageMath", true);
 
             //register menu
-            Menus.registerMenu(69420, (player, selection) -> {
+            menuID = Menus.registerMenu((player, selection) -> {
                 if (selection < 0) return;
                 if (selection < 16) {
                     //todo calculate Real but don't limit selected Item
@@ -184,7 +186,7 @@ public class mrc extends Mod {
                 if (Core.input.keyRelease(key) && x1 != -1 && y1 != -1) {
                     x2 = rawCursorX;
                     y2 = rawCursorY;
-                    Menus.menu(69420, menuTitle, menuDescription, buttons);
+                    Menus.menu(menuID, menuTitle, menuDescription, buttons);
                     //calculate(x1, y1, rawCursorX, rawCursorY);
                 }
             }

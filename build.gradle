@@ -10,7 +10,7 @@ repositories{
 }
 
 ext{
-    mindustryVersion = 'v129.1'
+    mindustryVersion = 'v134'
 
     doExec = { cmd ->
         def proc = cmd.execute(null, new File("$buildDir/libs"))
