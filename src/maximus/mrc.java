@@ -59,6 +59,9 @@ public class mrc extends Mod {
             }
         });
         Events.on(ClientLoadEvent.class, event -> {
+            if (Vars.mobile) {
+                Vars.ui.showInfo("This mod is not made for mobile!");
+            }
             //load language pack
             Locale locale;
             String loc = settings.getString("locale");
