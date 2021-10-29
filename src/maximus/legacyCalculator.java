@@ -36,7 +36,7 @@ import static maximus.mrc.translatedStringOptional;
 import static maximus.mrc.translatedStringPower;
 import static mindustry.Vars.world;
 
-public class calculator {
+public class legacyCalculator {
     public String formattedMessage = "";
     //
     public final int xl;
@@ -48,14 +48,10 @@ public class calculator {
     private final ArrayList<pc> apc = new ArrayList<>();
     private Item bestFlammableFuel = null;
     private Item bestRadioactiveFuel = null;
-    //
-    public static String translatedStringMaxTitle = "";
-    public static String translatedStringRealTitle = "";
-    public static String translatedStringPowerGeneration = "";
     //old
     public final HashMap<Item, List<pcEntry>> itemPC;
 
-    public calculator(int x1, int y1, int x2, int y2, boolean rateLimit) throws Exception {
+    public legacyCalculator(int x1, int y1, int x2, int y2, boolean rateLimit) throws Exception {
         xl = Math.min(x1, x2);
         xr = Math.max(x1, x2);
         yb = Math.min(y1, y2);
@@ -99,8 +95,7 @@ public class calculator {
                         pc.products = new items[] { new items(db.dominantItem, rate) };
                         pc.rate = 60f;
                     }
-                }
-                if (t.block() instanceof Fracker fracker) {
+                } else if (t.block() instanceof Fracker fracker) {
                     if (fracker.consumes.has(ConsumeType.item) && fracker.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
                         pc.materials = IStoItems(ci.items);
                         pc.rate = 60f / fracker.itemUseTime;
@@ -362,8 +357,7 @@ public class calculator {
         });
 
         DecimalFormat df = new DecimalFormat("0.00");
-        String title = rateLimit ? translatedStringRealTitle : translatedStringMaxTitle;
-        StringBuilder builder = new StringBuilder(title);
+        StringBuilder builder = new StringBuilder();
         for (Object o : isd.keySet()) {
             finalAverages averages = isd.get(o);
             String emoji = "";
@@ -395,14 +389,14 @@ public class calculator {
             if (averages.consumptionOptional > 0) builder.append(" [lightgray](-").append(df.format(averages.consumptionOptional)).append(" ").append(translatedStringOptional).append(")");
         }
         if (powerAverageP > 0) {
-            builder.append("\n[white]([lightgray]").append(df.format((powerEfficiencies / powerProducers) * 100f)).append("%[white]) ").append(Iconc.power).append("[yellow]").append(translatedStringPowerGeneration).append(" : [lime]+").append(powerAverageP);
+            builder.append("\n[white]([lightgray]").append(df.format((powerEfficiencies / powerProducers) * 100f)).append("%[white]) ").append(Iconc.power).append("[yellow]").append(mrc.translatedStringPowerGeneration).append(" : [lime]+").append(powerAverageP);
         }
         if (powerAverageP > 0 || powerAverageN < 0) {
             builder.append("\n[yellow]").append(translatedStringPower).append(" : [white]").append(powerAverageP + powerAverageN < 0 ? "[scarlet]" : "[lime]+").append(df.format(powerAverageP + powerAverageN));
             if (powerAverageP > 0 && powerAverageN < 0) builder.append(" [white]= [lime]+").append(df.format(powerAverageP)).append(" [white]").append(powerAverageP > 0 ? "+ " : "= ").append("[scarlet]").append(df.format(powerAverageN));
         }
 
-        if (!builder.toString().equals(title)) formattedMessage = builder.toString();
+        if (builder.length() != 0) formattedMessage = builder.toString();
     }
 
     private static class pcEntry {
@@ -998,13 +992,5 @@ public class calculator {
             itemPC.putIfAbsent(is.item, new ArrayList<>());
             itemPC.get(is.item).add(new pcEntry(0, is.amount / (interval / 60f), optional));
         }
-    }
-
-    public void callLabel() {
-        Menus.label(formattedMessage, 30, (xl + xr) * 4f, (yb - 5) * 8f);
-    }
-
-    public void callInfoMessage() {
-        Vars.ui.showInfo(formattedMessage);
     }
 }

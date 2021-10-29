@@ -14,7 +14,6 @@ import arc.util.Log;
 import mindustry.Vars;
 import mindustry.content.Blocks;
 import mindustry.core.World;
-import mindustry.ctype.ContentList;
 import mindustry.game.EventType;
 import mindustry.game.EventType.ClientLoadEvent;
 import mindustry.game.EventType.Trigger;
@@ -22,11 +21,14 @@ import mindustry.graphics.Drawf;
 import mindustry.graphics.Pal;
 import mindustry.input.Placement;
 import mindustry.mod.Mod;
+import mindustry.type.Item;
+import mindustry.type.Liquid;
 import mindustry.ui.Menus;
 import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.Tile;
 
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -39,13 +41,15 @@ public class mrc extends Mod {
     private static final int maxSelection = 500;
     public static ResourceBundle bundle;
     //menu
-    private static String[][] buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\nCalculate Maximum\nCalculate Real\nChange Key Bind");
     public static String menuTitle = "";
     public static String menuDescription = "";
     private static int menuID;
     //translations
     public static String translatedStringPower = "";
     public static String translatedStringOptional = "";
+    public static String translatedStringMaxTitle = "";
+    public static String translatedStringRealTitle = "";
+    public static String translatedStringPowerGeneration = "";
 
     private static int x1 = -1, y1 = -1, x2 = -1, y2 = -1;
 
@@ -84,14 +88,14 @@ public class mrc extends Mod {
             //setup
             menuTitle = bundle.getString("mrc.mrc");
             menuDescription = bundle.getString("mrc.menuDescription");
-            buttons = menuButtonFormatter("\uF838\t\uF837\t\uF836\t\uF835\n\uF834\t\uF833\t\uF832\t\uF831\n\uF830\t\uF82F\t\uF82E\t\uF82D\n\uF82C\t\uF82B\t\uF82A\t\uF829\n" + bundle.getString("calculateMaximum") + "\n" + bundle.getString("calculateReal") + "\n" + bundle.getString("changeKeyBind"));
+
 
             translatedStringPower = Core.bundle.get("bar.power");
             translatedStringOptional = mrc.bundle.getString("optional");
 
-            calculator.translatedStringRealTitle = mrc.bundle.getString("calculateReal") + mrc.bundle.getString("calculateReal.label");
-            calculator.translatedStringPowerGeneration = mrc.bundle.getString("powerGeneration");
-            calculator.translatedStringMaxTitle = mrc.bundle.getString("calculateMaximum") + "\n[orange]=========================[white]";
+            translatedStringRealTitle = mrc.bundle.getString("calculateReal") + mrc.bundle.getString("calculateReal.label");
+            translatedStringPowerGeneration = mrc.bundle.getString("powerGeneration");
+            translatedStringMaxTitle = mrc.bundle.getString("calculateMaximum") + "\n[orange]=========================[white]";
 
             for (KeyCode kc : KeyCode.all) { //this is probably a terrible implementation of custom key binds
                 if (kc.value.equalsIgnoreCase(settings.getString("mrcKey", "`"))) {
@@ -112,59 +116,86 @@ public class mrc extends Mod {
 
             //register menu
             menuID = Menus.registerMenu((player, selection) -> {
-                if (selection < 0) return;
-                if (selection < 16) {
-                    //todo calculate Real but don't limit selected Item
-                } else {
-                    calculator cal = null;
-                    switch (selection) {
-                        case 16 -> {
-                            try {
-                                cal = new calculator(x1, y1, x2, y2, false);
-                            } catch (Exception e) {
-                                Log.err(e);
-                            }
-                        }
-                        case 17 -> {
-                            try {
-                                cal = new calculator(x1, y1, x2, y2, true);
-                            } catch (Exception e) {
-                                Log.err(e);
-                            }
-                        }
-                        case 18 -> Vars.ui.showConfirm("Do you want to rebind Max Rate Calculator?", () -> {
-                            Dialog dialog = new Dialog(Core.bundle.get("keybind.press", "Press a key..."));
-                            dialog.titleTable.getCells().first().pad(4);
-                            dialog.addListener(new InputListener(){
-                                @Override
-                                public boolean touchDown(InputEvent event, float x, float y, int pointer, KeyCode keycode){
-                                    if(keycode == KeyCode.escape) return false;
-                                    key = keycode;
-                                    settings.put("mrcKey", key.value);
-                                    Vars.ui.showInfo("Max Rate Calculator Key set to " + key.value);
-                                    dialog.hide();
-                                    return false;
-                                }
-
-                                @Override
-                                public boolean keyDown(InputEvent event, KeyCode keycode){
-                                    if(keycode == KeyCode.escape) return false;
-                                    key = keycode;
-                                    settings.put("mrcKey", key.value);
-                                    Vars.ui.showInfo("Max Rate Calculator Key set to " + key.value);
-                                    dialog.hide();
-                                    return false;
-                                }
-                            });
-                            dialog.show();
-                        });
-                    }
-                    if (cal != null && !cal.formattedMessage.isEmpty()) {
-                        if (settings.getBool("mrcSendInfoMessage", false)) {
-                            cal.callInfoMessage();
+                System.out.println(Vars.state.isPlaying());
+                if (selection < 0 || !Vars.state.isPlaying()) return;
+                int itemListSize = Vars.content.items().size;
+                System.out.println(selection);
+                System.out.println(itemListSize);
+                System.out.println(Vars.content.liquids().size);
+                if (selection < itemListSize + Vars.content.liquids().size) {
+                    try {
+                        Object o;
+                        if (selection < itemListSize) {
+                            o = Vars.content.items().get(selection);
                         } else {
-                            cal.callLabel();
+                            o = Vars.content.liquids().get(selection - itemListSize);
                         }
+                        //calculate
+                        String text = translatedStringRealTitle + matrixCalculaltor.calculate(x1, y1, x2, y2, true, o);
+                        if (settings.getBool("mrcSendInfoMessage", false)) {
+                            Vars.ui.showInfo(text);
+                        } else {
+                            Menus.label(text, 30, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
+                        }
+                    } catch (Exception e) {
+                        Log.err(e);
+                    }
+                } else {
+                    int actionSType = selection - itemListSize - Vars.content.liquids().size;
+                    try {
+                        switch (actionSType) {
+                            case 0 -> {
+                                settings.put("mrcUseMatrixCalculator", !settings.getBool("mrcUseMatrixCalculator", true));
+                                Menus.menu(menuID, menuTitle, menuDescription, getButtons());
+                            }
+                            case 1, 2 -> {
+                                //calculate
+                                boolean rateLimit = actionSType == 2;
+                                String data;
+                                if (settings.getBool("mrcUseMatrixCalculator", true)) {
+                                    data = matrixCalculaltor.calculate(x1, y1, x2, y2, rateLimit);
+                                } else {
+                                    data = new legacyCalculator(x1, y1, x2, y2, rateLimit).formattedMessage;
+                                }
+                                String text = (rateLimit ? translatedStringRealTitle : translatedStringMaxTitle) + data;
+                                if (settings.getBool("mrcSendInfoMessage", false)) {
+                                    Vars.ui.showInfo(text);
+                                } else {
+                                    Menus.label(text, 30, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
+                                }
+                            }
+                            case 3 -> {
+                                //info
+                            }
+                            case 4 -> Vars.ui.showConfirm("Do you want to rebind Max Rate Calculator?", () -> {
+                                Dialog dialog = new Dialog(Core.bundle.get("keybind.press", "Press a key..."));
+                                dialog.titleTable.getCells().first().pad(4);
+                                dialog.addListener(new InputListener(){
+                                    @Override
+                                    public boolean touchDown(InputEvent event, float x, float y, int pointer, KeyCode keycode){
+                                        if(keycode == KeyCode.escape) return false;
+                                        key = keycode;
+                                        settings.put("mrcKey", key.value);
+                                        Vars.ui.showInfo("Max Rate Calculator Key set to " + key.value);
+                                        dialog.hide();
+                                        return false;
+                                    }
+
+                                    @Override
+                                    public boolean keyDown(InputEvent event, KeyCode keycode){
+                                        if(keycode == KeyCode.escape) return false;
+                                        key = keycode;
+                                        settings.put("mrcKey", key.value);
+                                        Vars.ui.showInfo("Max Rate Calculator Key set to " + key.value);
+                                        dialog.hide();
+                                        return false;
+                                    }
+                                });
+                                dialog.show();
+                            });
+                        }
+                    } catch (Exception e) {
+                        Log.err(e);
                     }
                 }
                 x1 = -1;
@@ -178,6 +209,7 @@ public class mrc extends Mod {
                 settings.forceSave();
             }
         });
+
         Events.run(EventType.Trigger.update, () -> {
             if (Vars.state.isPlaying() && !Vars.ui.chatfrag.shown() && !Core.scene.hasDialog()) {
                 int rawCursorX = World.toTile(Core.input.mouseWorld().x), rawCursorY = World.toTile(Core.input.mouseWorld().y);
@@ -189,19 +221,48 @@ public class mrc extends Mod {
                 if (Core.input.keyRelease(key) && x1 != -1 && y1 != -1) {
                     x2 = rawCursorX;
                     y2 = rawCursorY;
-                    Menus.menu(menuID, menuTitle, menuDescription, buttons);
+                    Menus.menu(menuID, menuTitle, menuDescription, getButtons());
                     //calculate(x1, y1, rawCursorX, rawCursorY);
                 }
             }
         });
     }
 
-    @Override
-    public void loadContent(){
-		Log.info("Loading the Max Rate Calculator!");
+    //menu formatter
+    public static String[][] getButtons() {
+        return dynamicButtonFormatter(settings.getBool("mrcUseMatrixCalculator", true) ? "Using Matrix Calculator" : "Using Legacy Calculator", bundle.getString("calculateMaximum"), bundle.getString("calculateReal"), bundle.getString("info"), bundle.getString("changeKeyBind"));
     }
 
-    //menu formatter
+    public static String[][] dynamicButtonFormatter(String... buttons) {
+        ArrayList<ArrayList<String>> list = new ArrayList<>();
+        int buttonNumber = 0;
+        for (Item i : Vars.content.items()) {
+            if (buttonNumber++ % 4 == 0) {
+                list.add(new ArrayList<>());
+            }
+            list.get(list.size() - 1).add(i.emoji());
+        }
+        for (Liquid l : Vars.content.liquids()) {
+            if (buttonNumber++ % 4 == 0) {
+                list.add(new ArrayList<>());
+            }
+            list.get(list.size() - 1).add(l.emoji());
+        }
+        for (String s : buttons) {
+            list.add(new ArrayList<>());
+            list.get(list.size() - 1).add(s);
+        }
+        //to 2d string array
+        String[][] out = new String[list.size()][];
+        for (int i = 0; i < list.size(); i++) {
+            ArrayList<String> al = list.get(i);
+            out[i] = new String[al.size()];
+            for (int r = 0; r < al.size(); r++) {
+                out[i][r] = al.get(r);
+            }
+        }
+        return out;
+    }
     public static String[][] menuButtonFormatter(String input) {
         String[] rows = input.split("\n");
         String[][] out = new String[rows.length][];

@@ -19,7 +19,7 @@ ext{
 }
 
 dependencies{
-    annotationProcessor 'com.github.Anuken:jabel:34e4c172e65b3928cd9eabe1993654ea79c409cd'
+    annotationProcessor "com.github.Anuken:jabel:0.6.0"
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
 }
