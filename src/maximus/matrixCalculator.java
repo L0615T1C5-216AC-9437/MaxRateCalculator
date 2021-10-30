@@ -30,7 +30,7 @@ import java.util.function.Consumer;
 import static maximus.mrc.translatedStringOptional;
 import static mindustry.Vars.world;
 
-public class matrixCalculaltor {
+public class matrixCalculator {
     public static String calculate(int x1, int y1, int x2, int y2, boolean rateLimit) throws Exception {
         return calculate(x1, y1, x2, y2, rateLimit, null);
     }
@@ -60,7 +60,7 @@ public class matrixCalculaltor {
                     if (t.block().consumes.has(ConsumeType.power) && t.block().consumes.get(ConsumeType.power) instanceof ConsumePower cp) {
                         rb.setPowerIn(cp.usage * 60f);
                     }
-                    if (t.block().consumes.has(ConsumeType.liquid) && t.block().consumes.get(ConsumeType.liquid) instanceof ConsumeLiquid cl) {
+                    if (t.block().consumes.has(ConsumeType.liquid) && t.block().consumes.get(ConsumeType.liquid) instanceof ConsumeLiquid cl && !(t.block() instanceof Drill)) { //if uses liquid but not a drill
                         rb.addIngredient(cl.liquid, cl.amount * 60f);
                     }
                     //specialized
@@ -69,6 +69,9 @@ public class matrixCalculaltor {
                     if (t.block() instanceof Drill d && t.build instanceof Drill.DrillBuild db) {
                         if (db.dominantItems > 0) {
                             float boost = db.liquids.total() > 0 || !rateLimit ? d.liquidBoostIntensity * d.liquidBoostIntensity : 1f; //if water cooled or getting max rate
+                            if (boost > 1f && t.block().consumes.has(ConsumeType.liquid) && t.block().consumes.get(ConsumeType.liquid) instanceof ConsumeLiquid cl && !(t.block() instanceof Drill)) { //if uses liquid but not a drill
+                                rb.addIngredient(cl.liquid, cl.amount * 60f);
+                            }
                             float perSecond = db.dominantItems * boost;
                             float difficulty = d.drillTime + d.hardnessDrillMultiplier * db.dominantItem.hardness;
                             rb.addProduct(db.dominantItem, perSecond / difficulty * 60f);
@@ -247,61 +250,115 @@ public class matrixCalculaltor {
             if (add) finalRecipes.add(r);
         }
         if (rateLimit) {
-            ArrayList<Object> placeholders = new ArrayList<>();
-            HashMap<Object, Float> output = new HashMap<>();
-            ArrayList<Object> objectIndex = new ArrayList<>();
+            float max;
+            float[] perfectRatios;
+            while (true) {
+                System.out.println("looping");
+                //calculate output and inputs
+                ArrayList<Object> placeholders = new ArrayList<>();
+                HashMap<Object, Float> output = new HashMap<>();
+                ArrayList<Object> objectIndex = new ArrayList<>();
 
-
-            HashMap<Object, ip> allIP = getIP(finalRecipes);
-
-
-            for (Object o : allIP.keySet()) {
-                objectIndex.add(o);
-                ip ip = allIP.get(o);
-                if (ip.p == 0) {
-                    placeholders.add(o);
-                } else if (ip.i == 0) {
-                    output.put(o, ip.p);
+                HashMap<Object, ip> allIP = getIP(finalRecipes);
+                for (Object o : allIP.keySet()) {
+                    objectIndex.add(o);
+                    ip ip = allIP.get(o);
+                    if (ip.p == 0) {
+                        placeholders.add(o);
+                    } else if (ip.i == 0) {
+                        output.put(o, ip.p);
+                    }
                 }
-            }
-            //make matrix
-            float[][] a = new float[objectIndex.size()][finalRecipes.size() + placeholders.size() + 1];
-            for (int l = 0; l < a.length - 1; l++) {
-                for (int r = 0; r < a[0].length; r++) {
-                    a[l][r] = 0f;
+                //make matrix
+                float[][] a = new float[objectIndex.size()][finalRecipes.size() + placeholders.size() + 1];
+                for (int l = 0; l < a.length - 1; l++) {
+                    for (int r = 0; r < a[0].length; r++) {
+                        a[l][r] = 0f;
+                    }
                 }
-            }
-            //placeholder for objects used as input
-            for (int i = 0; i < placeholders.size(); i++) {
-                a[objectIndex.indexOf(placeholders.get(i))][finalRecipes.size() + i] = 1;
-            }
-            //attempt to max out every item not being used but produced
-            for (Object o : output.keySet()) {
-                float val = output.get(o);
-                a[objectIndex.indexOf(o)][a[0].length - 1] = val;
-            }
-            //add each recipe to matrix
-            for (Recipe r : finalRecipes) {
-                HashMap<Object, ip> localIP = new HashMap<>();
-                r.getProducts(IPRate -> {
-                    localIP.putIfAbsent(IPRate.object, new ip());
-                    localIP.get(IPRate.object).incrementP(IPRate.rate);
-                });
-                r.getIngredients(IPRate -> {
-                    localIP.putIfAbsent(IPRate.object, new ip());
-                    localIP.get(IPRate.object).incrementI(IPRate.rate);
-                });
-                localIP.forEach((k,v) -> a[objectIndex.indexOf(k)][finalRecipes.indexOf(r)] = v.p - v.i);
+                //placeholder for objects used as input
+                for (int i = 0; i < placeholders.size(); i++) {
+                    a[objectIndex.indexOf(placeholders.get(i))][finalRecipes.size() + i] = 1;
+                }
+                //attempt to max out every item not being used but produced
+                for (Object o : output.keySet()) {
+                    float val = output.get(o);
+                    a[objectIndex.indexOf(o)][a[0].length - 1] = val;
+                }
+                //add each recipe to matrix
+                for (Recipe r : finalRecipes) {
+                    HashMap<Object, ip> localIP = new HashMap<>();
+                    r.getProducts(IPRate -> {
+                        localIP.putIfAbsent(IPRate.object, new ip());
+                        localIP.get(IPRate.object).incrementP(IPRate.rate);
+                    });
+                    r.getIngredients(IPRate -> {
+                        localIP.putIfAbsent(IPRate.object, new ip());
+                        localIP.get(IPRate.object).incrementI(IPRate.rate);
+                    });
+                    localIP.forEach((k, v) -> a[objectIndex.indexOf(k)][finalRecipes.indexOf(r)] = v.p - v.i);
+                }
+
+                //get perfect ratio
+                perfectRatios = matrix.calculate(a);
+                //get max recipe
+                max = 0f;
+                int maxObject = -1;
+                for (int i = 0; i < finalRecipes.size(); i++) {
+                    float f = perfectRatios[i];
+                    if (f > max) {
+                        max = f;
+                        maxObject = i;
+                    }
+                }
+                if (maxObject > -1) {
+                    Recipe r = finalRecipes.get(maxObject);
+                    if (lessCapacityClonedRecipes.containsKey(r)) {
+                        Recipe r2 = lessCapacityClonedRecipes.get(r);
+                        lessCapacityClonedRecipes.remove(r);
+                        float powerIn = r.powerIn + r2.powerIn;
+                        float powerOut = r.powerOut + r2.powerOut;
+                        HashMap<Object, Float> ingredients = new HashMap<>();
+                        HashMap<Object, Float> products = new HashMap<>();
+                        r.getIngredients(ipr -> {
+                            ingredients.putIfAbsent(ipr.object, 0f);
+                            ingredients.put(ipr.object, ingredients.get(ipr.object) + ipr.rate);
+                        });
+                        r2.getIngredients(ipr -> {
+                            ingredients.putIfAbsent(ipr.object, 0f);
+                            ingredients.put(ipr.object, ingredients.get(ipr.object) + ipr.rate);
+                        });
+                        r.getProducts(ipr -> {
+                            products.putIfAbsent(ipr.object, 0f);
+                            products.put(ipr.object, products.get(ipr.object) + ipr.rate);
+                        });
+                        r2.getProducts(ipr -> {
+                            products.putIfAbsent(ipr.object, 0f);
+                            products.put(ipr.object, products.get(ipr.object) + ipr.rate);
+                        });
+                        IPRate[] finalIngredients = new IPRate[ingredients.size()];
+                        IPRate[] finalProducts = new IPRate[products.size()];
+                        int i = 0;
+                        for (Object o : ingredients.keySet()) {
+                            finalIngredients[i++] = new IPRate(o, ingredients.get(o));
+                        }
+                        i = 0;
+                        for (Object o : products.keySet()) {
+                            finalProducts[i++] = new IPRate(o, products.get(o));
+                        }
+                        Recipe r3 = new Recipe(finalIngredients, finalProducts, powerIn, powerOut, 1, r.emoji);
+                        //replace r with r3
+                        finalRecipes.add(r3);
+                        finalRecipes.remove(r);
+                        //if there is a tertiary duplicate recipe
+                        if (lessCapacityClonedRecipes.containsKey(r2)) {
+                            lessCapacityClonedRecipes.put(r3, lessCapacityClonedRecipes.get(r2));
+                            lessCapacityClonedRecipes.remove(r2);
+                        }
+                    } else break;
+                } else break;
             }
 
-            //get perfect ratio
-            float[] perfectRatios = matrix.calculate(a);
-            //get max recipe
-            float max = 0f;
-            for (int i = 0; i < finalRecipes.size(); i++) {
-                float f = perfectRatios[i];
-                if (f > max) max = f;
-            }
             //make max recipe 100%
             float fix = 1 / max;
             for (int i = 0; i < perfectRatios.length; i++) {

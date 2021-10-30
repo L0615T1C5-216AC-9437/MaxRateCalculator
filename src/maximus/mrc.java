@@ -137,7 +137,7 @@ public class mrc extends Mod {
                             o = Vars.content.liquids().get(selection - itemListSize);
                         }
                         //calculate
-                        String text = translatedStringRealTitle + matrixCalculaltor.calculate(x1, y1, x2, y2, true, o);
+                        String text = translatedStringRealTitle + matrixCalculator.calculate(x1, y1, x2, y2, true, o);
                         if (settings.getBool("mrcSendInfoMessage", false)) {
                             Vars.ui.showInfo(text);
                         } else {
