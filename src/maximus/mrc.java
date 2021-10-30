@@ -117,7 +117,13 @@ public class mrc extends Mod {
             //register menu
             menuID = Menus.registerMenu((player, selection) -> {
                 System.out.println(Vars.state.isPlaying());
-                if (selection < 0 || !Vars.state.isPlaying()) return;
+                if (selection < 0 || !Vars.state.isPlaying()) {
+                    x1 = -1;
+                    y1 = -1;
+                    x2 = -1;
+                    y2 = -1;
+                    return;
+                }
                 int itemListSize = Vars.content.items().size;
                 System.out.println(selection);
                 System.out.println(itemListSize);
@@ -139,6 +145,11 @@ public class mrc extends Mod {
                         }
                     } catch (Exception e) {
                         Log.err(e);
+                    } finally {
+                        x1 = -1;
+                        y1 = -1;
+                        x2 = -1;
+                        y2 = -1;
                     }
                 } else {
                     int actionSType = selection - itemListSize - Vars.content.liquids().size;
@@ -149,19 +160,28 @@ public class mrc extends Mod {
                                 Menus.menu(menuID, menuTitle, menuDescription, getButtons());
                             }
                             case 1, 2 -> {
-                                //calculate
-                                boolean rateLimit = actionSType == 2;
-                                String data;
-                                if (settings.getBool("mrcUseMatrixCalculator", true)) {
-                                    data = matrixCalculaltor.calculate(x1, y1, x2, y2, rateLimit);
-                                } else {
-                                    data = new legacyCalculator(x1, y1, x2, y2, rateLimit).formattedMessage;
-                                }
-                                String text = (rateLimit ? translatedStringRealTitle : translatedStringMaxTitle) + data;
-                                if (settings.getBool("mrcSendInfoMessage", false)) {
-                                    Vars.ui.showInfo(text);
-                                } else {
-                                    Menus.label(text, 30, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
+                                try {
+                                    //calculate
+                                    boolean rateLimit = actionSType == 2;
+                                    String data;
+                                    if (settings.getBool("mrcUseMatrixCalculator", true)) {
+                                        data = matrixCalculator.calculate(x1, y1, x2, y2, rateLimit);
+                                    } else {
+                                        data = new legacyCalculator(x1, y1, x2, y2, rateLimit).formattedMessage;
+                                    }
+                                    String text = (rateLimit ? translatedStringRealTitle : translatedStringMaxTitle) + data;
+                                    if (settings.getBool("mrcSendInfoMessage", false)) {
+                                        Vars.ui.showInfo(text);
+                                    } else {
+                                        Menus.label(text, 30, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
+                                    }
+                                } catch (Exception e) {
+                                    Log.err(e);
+                                } finally {
+                                    x1 = -1;
+                                    y1 = -1;
+                                    x2 = -1;
+                                    y2 = -1;
                                 }
                             }
                             case 3 -> {
@@ -198,10 +218,6 @@ public class mrc extends Mod {
                         Log.err(e);
                     }
                 }
-                x1 = -1;
-                y1 = -1;
-                x2 = -1;
-                y2 = -1;
             });
             if (!settings.has("mrcFirstTime")) {
                 Menus.infoMessage(bundle.getString("mrc.firstTimeMessage"));
