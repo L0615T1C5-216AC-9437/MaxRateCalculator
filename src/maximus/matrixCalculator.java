@@ -4,7 +4,6 @@ import arc.Core;
 import arc.graphics.Color;
 import arc.struct.Seq;
 import mindustry.Vars;
-import mindustry.content.Blocks;
 import mindustry.gen.Building;
 import mindustry.type.Item;
 import mindustry.type.ItemStack;
@@ -265,7 +264,7 @@ public class matrixCalculator {
                     ip ip = allIP.get(o);
                     if (ip.p == 0) {
                         placeholders.add(o);
-                    } else if (ip.i == 0) {
+                    } else if (ip.i == 0 || o == doNotThrottle) {
                         output.put(o, ip.p);
                     }
                 }
