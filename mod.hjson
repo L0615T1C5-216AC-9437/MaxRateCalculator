@@ -3,6 +3,6 @@ displayName: "Max Rate Calculator"
 author: "L0615T1C5.216AC#9437"
 main: "maximus.mrc"
 description: "Calculate the rates and ratios of your machinations!\n\nThis mod will allow you to easily calculate the amount of resources your factory needs and how much it's producing"
-version: 1.5.3
-minGameVersion: 129
+version: 2.1
+minGameVersion: 134
 hidden: true
