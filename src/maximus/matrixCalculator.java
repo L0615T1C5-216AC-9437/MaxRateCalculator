@@ -30,11 +30,11 @@ import static maximus.mrc.translatedStringOptional;
 import static mindustry.Vars.world;
 
 public class matrixCalculator {
-    public static String calculate(int x1, int y1, int x2, int y2, boolean rateLimit) throws Exception {
+    public static calculationResults calculate(int x1, int y1, int x2, int y2, boolean rateLimit) throws Exception {
         return calculate(x1, y1, x2, y2, rateLimit, null);
     }
 
-    public static String calculate(int x1, int y1, int x2, int y2, boolean rateLimit, Object doNotThrottle) throws Exception {
+    public static calculationResults calculate(int x1, int y1, int x2, int y2, boolean rateLimit, Object doNotThrottle) throws Exception {
         //setup coordinates
         int xl = Math.min(x1, x2);
         int xr = Math.max(x1, x2);
@@ -252,7 +252,6 @@ public class matrixCalculator {
             float max;
             float[] perfectRatios;
             while (true) {
-                System.out.println("looping");
                 //calculate output and inputs
                 ArrayList<Object> placeholders = new ArrayList<>();
                 HashMap<Object, Float> output = new HashMap<>();
@@ -369,14 +368,18 @@ public class matrixCalculator {
             }
         }
 
-        HashMap<Object, ip> allIP = getIP(finalRecipes);
+        return new calculationResults(finalRecipes, parseRecipe(finalRecipes, rateLimit, false));
+    }
+
+    public static String parseRecipe(ArrayList<Recipe> recipes, boolean rateLimit, boolean complex) {
+        HashMap<Object, ip> allIP = getIP(recipes);
 
         StringBuilder builder = new StringBuilder();
         DecimalFormat df = new DecimalFormat("0.00");
         for (Object o : allIP.keySet()) {
             int machines = 0;
             float totalMultiplier = 0f;
-            for (Recipe r : finalRecipes) {
+            for (Recipe r : recipes) {
                 if (r.containsProduct(o)) {
                     machines += r.machines;
                     totalMultiplier += (r.multiplier * r.machines);
@@ -403,7 +406,7 @@ public class matrixCalculator {
 
             builder.append("\n[white]");
             if (rateLimit) {
-                builder.append("([lightgray]").append(df.format(finalMultiplier * 100f)).append("%[white]) ");
+                builder.append("([lightgray]").append(yeetZero(df.format(finalMultiplier * 100f))).append("%[white]) ");
             }
             builder.append(emoji).append("[#").append(color).append("]").append(name).append(" :");
             float difference = ip.p - ip.i;
@@ -412,9 +415,31 @@ public class matrixCalculator {
             if (ip.p > 0 || ip.i > 0) builder.append(difference == 0f ? " [lightgray]" : difference < 0 ? " [scarlet]" : " [lime]+").append(df.format(difference));
             if ((Core.settings.getBool("mrcShowZeroAverageMath", true) || difference != 0f) && ip.p > 0 && ip.i > 0) builder.append(" [white]= [lime]+").append(df.format(ip.p)).append(" [white]+ [scarlet]-").append(df.format(ip.i));
             if (000 > 0) builder.append(" [lightgray](-").append(df.format(000)).append(" ").append(translatedStringOptional).append(")");//change 000 to consumption optional
+            if (complex && ip.i > 0) {
+                ArrayList<String> subBuilder = new ArrayList<>();
+                for (Recipe r : recipes) {
+                    StringBuilder localBuilder = new StringBuilder();
+                    if (r.containsIngredient(o)) {
+                        IPRate ipr = r.getIngredient(o);
+                        localBuilder.append(" [white]([lightgray]").append(yeetZero(df.format((ipr.rate / ip.i) * 100f))).append("%[white]) ").append(r.emoji).append(" : [scarlet]-").append(df.format(ipr.rate));
+                    }
+                    if (r.containsProduct(o)) {
+                        IPRate ipr = r.getProduct(o);
+                        localBuilder.append(" [white]([lightgray]").append(yeetZero(df.format((ipr.rate / ip.p) * 100f))).append("%[white]) ").append(r.emoji).append(" : [lime]+").append(df.format(ipr.rate));
+                    }
+                    if (localBuilder.length() != 0) subBuilder.add(localBuilder.toString());
+                }
+                for (int i = 0; i < subBuilder.size(); i++) {
+                    builder.append("\n [gray]").append(i == subBuilder.size() - 1 ? "└" : "├").append(subBuilder.get(i));
+                }
+            }
         }
 
         return builder.toString();
+    }
+
+    public static String yeetZero(String s) {
+        return s.equals("100.00") ? "100.0" : s;
     }
 
     public static HashMap<Object, ip> getIP(ArrayList<Recipe> recipes) {
@@ -529,10 +554,28 @@ public class matrixCalculator {
             return false;
         }
         //getting rates
+        public IPRate getIngredient(Object o) {
+            for (IPRate ipr : ingredients) {
+                if (ipr.object == o) {
+                    return ipr.multiplier(multiplier * machines);
+                }
+            }
+            return null;
+        }
+
         public void getIngredients(Consumer<IPRate> out) {
             for (IPRate ipr : ingredients) {
                 out.accept(ipr.multiplier(multiplier * machines));
             }
+        }
+
+        public IPRate getProduct(Object o) {
+            for (IPRate ipr : products) {
+                if (ipr.object == o) {
+                    return ipr.multiplier(multiplier * machines);
+                }
+            }
+            return null;
         }
 
         public void getProducts(Consumer<IPRate> out) {
@@ -589,6 +632,16 @@ public class matrixCalculator {
 
         public boolean sameObject(IPRate ipr) {
             return object == ipr.object;
+        }
+    }
+
+    public static class calculationResults {
+        public final ArrayList<Recipe> recipes;
+        public final String text;
+
+        public calculationResults(ArrayList<Recipe> recipes, String text) {
+            this.recipes = recipes;
+            this.text = text;
         }
     }
 }

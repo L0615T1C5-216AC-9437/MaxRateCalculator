@@ -7,9 +7,14 @@ import arc.graphics.g2d.Draw;
 import arc.graphics.g2d.Fill;
 import arc.graphics.g2d.Lines;
 import arc.input.KeyCode;
+import arc.math.geom.Vec2;
+import arc.scene.actions.Actions;
 import arc.scene.event.InputEvent;
 import arc.scene.event.InputListener;
+import arc.scene.event.Touchable;
 import arc.scene.ui.Dialog;
+import arc.scene.ui.layout.Table;
+import arc.util.Align;
 import arc.util.Log;
 import mindustry.Vars;
 import mindustry.content.Blocks;
@@ -24,6 +29,8 @@ import mindustry.mod.Mod;
 import mindustry.type.Item;
 import mindustry.type.Liquid;
 import mindustry.ui.Menus;
+import mindustry.ui.Styles;
+import mindustry.ui.dialogs.SettingsMenuDialog;
 import mindustry.world.Block;
 import mindustry.world.Build;
 import mindustry.world.Tile;
@@ -33,8 +40,7 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 
 import static arc.Core.settings;
-import static mindustry.Vars.player;
-import static mindustry.Vars.world;
+import static mindustry.Vars.*;
 
 public class mrc extends Mod {
     private static KeyCode key = KeyCode.backtick;
@@ -108,15 +114,15 @@ public class mrc extends Mod {
             var coreBundle = Core.bundle.getProperties();
             coreBundle.put("setting.mrcSendInfoMessage.name", mrc.bundle.getString("mrc.settings.SendInfoMessage"));
             coreBundle.put("setting.mrcShowZeroAverageMath.name", mrc.bundle.getString("mrc.settings.ShowZeroAverageMath"));
-            Core.bundle.setProperties(coreBundle);
+            coreBundle.put("setting.mrcLabelExpirationTime.name", mrc.bundle.getString("mrc.settings.LabelExpirationTime"));
             //add custom settings
             settings.put("uiscalechanged", false);//stop annoying "ui scale changed" message
             addBooleanGameSetting("mrcSendInfoMessage", false);
             addBooleanGameSetting("mrcShowZeroAverageMath", true);
+            addSliderGameSetting("mrcLabelExpirationTime", 10, 0, 60, 5, i -> i == 0 ? bundle.getString("never") : i + " " + bundle.getString("seconds"));
 
             //register menu
             menuID = Menus.registerMenu((player, selection) -> {
-                System.out.println(Vars.state.isPlaying());
                 if (selection < 0 || !Vars.state.isPlaying()) {
                     x1 = -1;
                     y1 = -1;
@@ -125,9 +131,6 @@ public class mrc extends Mod {
                     return;
                 }
                 int itemListSize = Vars.content.items().size;
-                System.out.println(selection);
-                System.out.println(itemListSize);
-                System.out.println(Vars.content.liquids().size);
                 if (selection < itemListSize + Vars.content.liquids().size) {
                     try {
                         Object o;
@@ -137,11 +140,35 @@ public class mrc extends Mod {
                             o = Vars.content.liquids().get(selection - itemListSize);
                         }
                         //calculate
-                        String text = translatedStringRealTitle + matrixCalculator.calculate(x1, y1, x2, y2, true, o);
+                        var a = matrixCalculator.calculate(x1, y1, x2, y2, true, o);
+                        String text = translatedStringRealTitle + a.text;
+                        ArrayList<matrixCalculator.Recipe> recipes = a.recipes;
+
                         if (settings.getBool("mrcSendInfoMessage", false)) {
                             Vars.ui.showInfo(text);
+                        } else if (recipes != null) {
+                            customLabel cl = new customLabel(recipes, true, false, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
                         } else {
-                            Menus.label(text, 30, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
+                            final int fx1 = x1, fy1 = y1, fx2 = x2, fy2 = y2;
+                            var table = new Table(Styles.black3).margin(4);
+                            table.touchable = Touchable.enabled;
+                            table.update(() -> {
+                                if(state.isMenu()) table.remove();
+                                Vec2 v = Core.camera.project((fx1 + ((fx2 - fx1) / 2f)) * 8f, (Math.min(fy1, fy2) - 5) * 8f);
+                                table.setPosition(v.x, v.y, Align.center);
+                            });
+                            int duration = Core.settings.getInt("mrcLabelExpirationTime");
+                            if (duration > 0) {
+                                table.actions(Actions.delay(duration), Actions.remove());
+                            }
+                            table.add(translatedStringRealTitle + text).style(Styles.outlineLabel);
+                            table.row().button("Close", table::remove).wrapLabel(false);
+                            table.pack();
+                            table.act(0f);
+                            //make sure it's at the back
+                            Core.scene.root.addChildAt(0, table);
+
+                            table.getChildren().first().act(0f);
                         }
                     } catch (Exception e) {
                         Log.err(e);
@@ -164,16 +191,40 @@ public class mrc extends Mod {
                                     //calculate
                                     boolean rateLimit = actionSType == 2;
                                     String data;
+                                    ArrayList<matrixCalculator.Recipe> recipes = null;
                                     if (settings.getBool("mrcUseMatrixCalculator", true)) {
-                                        data = matrixCalculator.calculate(x1, y1, x2, y2, rateLimit);
+                                        matrixCalculator.calculationResults cr = matrixCalculator.calculate(x1, y1, x2, y2, rateLimit);
+                                        data = cr.text;
+                                        recipes = cr.recipes;
                                     } else {
                                         data = new legacyCalculator(x1, y1, x2, y2, rateLimit).formattedMessage;
                                     }
                                     String text = (rateLimit ? translatedStringRealTitle : translatedStringMaxTitle) + data;
                                     if (settings.getBool("mrcSendInfoMessage", false)) {
                                         Vars.ui.showInfo(text);
+                                    } else if (recipes != null) {
+                                        customLabel cl = new customLabel(recipes, rateLimit, false, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
                                     } else {
-                                        Menus.label(text, 30, (x1 + ((x2 - x1) / 2f)) * 8f, (Math.min(y1, y2) - 5) * 8f);
+                                        final int fx1 = x1, fy1 = y1, fx2 = x2, fy2 = y2;
+                                        var table = new Table(Styles.black3).margin(4);
+                                        table.touchable = Touchable.enabled;
+                                        table.update(() -> {
+                                            if(state.isMenu()) table.remove();
+                                            Vec2 v = Core.camera.project((fx1 + ((fx2 - fx1) / 2f)) * 8f, (Math.min(fy1, fy2) - 5) * 8f);
+                                            table.setPosition(v.x, v.y, Align.center);
+                                        });
+                                        int duration = Core.settings.getInt("mrcLabelExpirationTime");
+                                        if (duration > 0) {
+                                            table.actions(Actions.delay(duration), Actions.remove());
+                                        }
+                                        table.add((rateLimit ? translatedStringRealTitle : translatedStringMaxTitle) + text).style(Styles.outlineLabel);
+                                        table.row().button("Close", table::remove).wrapLabel(false);
+                                        table.pack();
+                                        table.act(0f);
+                                        //make sure it's at the back
+                                        Core.scene.root.addChildAt(0, table);
+
+                                        table.getChildren().first().act(0f);
                                     }
                                 } catch (Exception e) {
                                     Log.err(e);
@@ -338,5 +389,57 @@ public class mrc extends Mod {
 
     public static void addBooleanGameSetting(String key, boolean defaultBooleanValue){
         Vars.ui.settings.game.checkPref(key, settings.getBool(key, defaultBooleanValue));
+    }
+
+    public static void addSliderGameSetting(String key, int defaultIntValue, int minValue, int maxValue, int stepSize, SettingsMenuDialog.StringProcessor s){
+        Vars.ui.settings.game.sliderPref(key, defaultIntValue, minValue, maxValue, stepSize, s);
+    }
+
+    public static class customLabel {
+        public Table table;
+
+        private final ArrayList<matrixCalculator.Recipe> recipes;
+        private final boolean rateLimit;
+        private boolean complex;
+        private final float worldx;
+        private final float worldy;
+
+        public customLabel(ArrayList<matrixCalculator.Recipe> recipes, boolean rateLimit, boolean complex, float x, float y) {
+            this.recipes = recipes;
+            this.rateLimit = rateLimit;
+            this.complex = complex;
+            this.worldx = x;
+            this.worldy = y;
+
+            buildLabel();
+        }
+
+        public void buildLabel() {
+            table = new Table(Styles.black3).margin(4);
+            table.touchable = Touchable.enabled;
+            table.update(() -> {
+                if(state.isMenu()) table.remove();
+                Vec2 v = Core.camera.project(worldx, worldy);
+                table.setPosition(v.x, v.y, Align.center);
+            });
+            int duration = Core.settings.getInt("mrcLabelExpirationTime");
+            if (duration > 0) {
+                table.actions(Actions.delay(duration), Actions.remove());
+            }
+            table.add((rateLimit ? translatedStringRealTitle : translatedStringMaxTitle) + matrixCalculator.parseRecipe(recipes, rateLimit, complex)).style(Styles.outlineLabel);
+            table.row().button(complex ? "Simple" : "Complex", () -> {
+                this.complex = !this.complex;
+                table.remove();
+                buildLabel();
+            }).wrapLabel(false);
+            table.button("Close", table::remove).wrapLabel(false);
+            table.pack();
+            table.act(0f);
+            //make sure it's at the back
+            Core.scene.root.addChildAt(0, table);
+
+            table.getChildren().first().act(0f);
+        }
+
     }
 }
