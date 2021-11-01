@@ -59,7 +59,7 @@ public class legacyCalculator {
         this.rateLimit = rateLimit;
         itemPC = new HashMap<>();
 
-        if (xl < 0 || yb < 0 || xr > Vars.world.width() || yt > Vars.world.height()) throw new Exception("Invalid Coordinates");
+        if (xl < 0 || yb < 0 || xr > Vars.world.width() || yt > Vars.world.height()) throw new Exception(mrc.bundle.getString("invalidCoordinates"));
 
         ArrayList<Building> repeat = new ArrayList<>();
         for (int x = xl; x <= xr; x++) {

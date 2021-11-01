@@ -42,7 +42,7 @@ public class matrixCalculator {
         int yt = Math.max(y1, y2);
 
         if (xl < 0 || yb < 0 || xr > Vars.world.width() || yt > Vars.world.height())
-            throw new Exception("Invalid Coordinates");
+            throw new Exception(mrc.bundle.getString("invalidCoordinates"));
 
         final ArrayList<Building> processed = new ArrayList<>();
         final HashMap<Block, RecipeBuilder> recipes = new HashMap<>();
