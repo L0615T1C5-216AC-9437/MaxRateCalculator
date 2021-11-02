@@ -46,6 +46,7 @@ public class matrixCalculator {
 
         final ArrayList<Building> processed = new ArrayList<>();
         final HashMap<Block, RecipeBuilder> recipes = new HashMap<>();
+        final ArrayList<Object> separatorFixer = new ArrayList<>();
 
         for (int x = xl; x <= xr; x++) {
             for (int y = yb; y <= yt; y++) {
@@ -183,6 +184,8 @@ public class matrixCalculator {
                         for (Item item : chances.keySet()) {
                             //if chances.get(item) / totalSlots == 1.0, it will make x item every crafting cycle, if 0.5 it'll be every other cycle... so on and so forth
                             rb.addProduct(item, (float) chances.get(item) / totalSlots * 60f / separator.craftTime);
+                            //add dummy recipe to fix matrix calculation
+                            separatorFixer.add(item);
                         }
 
                         if (separator.consumes.has(ConsumeType.item) && separator.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
@@ -268,8 +271,9 @@ public class matrixCalculator {
                     }
                 }
                 //make matrix
-                float[][] a = new float[objectIndex.size()][finalRecipes.size() + placeholders.size() + 1];
-                for (int l = 0; l < a.length - 1; l++) {
+                int cs = finalRecipes.size() + placeholders.size() + separatorFixer.size() + 1;
+                float[][] a = new float[objectIndex.size() + (separatorFixer.size() == 0 ? 0 : 1)][cs];
+                for (int l = 0; l < a.length; l++) {
                     for (int r = 0; r < a[0].length; r++) {
                         a[l][r] = 0f;
                     }
@@ -277,6 +281,13 @@ public class matrixCalculator {
                 //placeholder for objects used as input
                 for (int i = 0; i < placeholders.size(); i++) {
                     a[objectIndex.indexOf(placeholders.get(i))][finalRecipes.size() + i] = 1;
+                }
+                //fix separators
+                for (int i = cs - 2, sf = 0; sf < separatorFixer.size(); sf++, i--) {
+                    //get second to last column and keep going back until you finish adding each dummy recipe to fix separator calculation
+                    //i = column for dummy recipe
+                    a[objectIndex.indexOf(separatorFixer.get(sf))][i] = 1; //make a dummy recipe that makes this
+                    a[a.length - 1][i] = 1; //make a dummy recipe that makes this
                 }
                 //attempt to max out every item not being used but produced
                 for (Object o : output.keySet()) {
