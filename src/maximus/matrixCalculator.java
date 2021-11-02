@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.function.Consumer;
 
 import static maximus.mrc.translatedStringOptional;
+import static maximus.mrc.translatedStringPower;
 import static mindustry.Vars.world;
 
 public class matrixCalculator {
@@ -399,7 +400,7 @@ public class matrixCalculator {
         HashMap<Object, ip> allIP = getIP(recipes);
 
         StringBuilder builder = new StringBuilder();
-        DecimalFormat df = new DecimalFormat("0.00");
+        DecimalFormat df = new DecimalFormat("00.00");
         for (Object o : allIP.keySet()) {
             int machines = 0;
             float totalMultiplier = 0f;
@@ -458,7 +459,32 @@ public class matrixCalculator {
                 }
             }
         }
-
+        float powerIn = 0, powerOut = 0;
+        for (Recipe r : recipes) {
+            powerIn += r.powerIn;
+            powerOut += r.powerOut;
+            if (rateLimit && r.powerOut > 0) {
+                builder.append("\n[white]([lightgray]").append(yeetZero(df.format(r.multiplier * 100f))).append("%[white]) ").append(r.emoji).append(" [lime]+").append(df.format(r.powerOut)).append("[yellow]\ue810");
+            }
+        }
+        if (powerOut > 0 || powerIn > 0) {
+            builder.append("\n[yellow]\ue810").append(translatedStringPower).append(" : [white]").append(powerOut - powerIn < 0 ? "[scarlet]" : "[lime]+").append(df.format(powerOut - powerIn));
+            if (powerOut > 0 && powerIn > 0) builder.append(" [white]= [lime]+").append(df.format(powerOut)).append(" [white]+ ").append("[scarlet]-").append(df.format(powerIn));
+        }
+        if (complex && powerIn > 0) {
+            ArrayList<String> subBuilder = new ArrayList<>();
+            for (Recipe r : recipes) {
+                if (r.powerIn > 0) {
+                    subBuilder.add(" [white]([lightgray]" + yeetZero(df.format((r.powerIn / powerIn) * 100f)) + "%[white]) " + r.emoji + " : [scarlet]-" + df.format(r.powerIn));
+                }
+                if (r.powerOut > 0) {
+                    subBuilder.add(" [white]([lightgray]" + yeetZero(df.format((r.powerOut / powerOut) * 100f)) + "%[white]) " + r.emoji + " : [lime]+" + df.format(r.powerOut));
+                }
+            }
+            for (int i = 0; i < subBuilder.size(); i++) {
+                builder.append("\n [gray]").append(i == subBuilder.size() - 1 ? "└" : "├").append(subBuilder.get(i));
+            }
+        }
         return builder.toString();
     }
 
