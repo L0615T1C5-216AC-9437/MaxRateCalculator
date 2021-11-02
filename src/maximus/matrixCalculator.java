@@ -47,6 +47,7 @@ public class matrixCalculator {
         final ArrayList<Building> processed = new ArrayList<>();
         final HashMap<Block, RecipeBuilder> recipes = new HashMap<>();
         final ArrayList<Object> separatorFixer = new ArrayList<>();
+        int powerGenerators = 0;
 
         for (int x = xl; x <= xr; x++) {
             for (int y = yb; y <= yt; y++) {
@@ -123,30 +124,35 @@ public class matrixCalculator {
 
                             //damn I wish I could use the java 17 switch
                             if (t.block() instanceof BurnerGenerator bg) {
+                                powerGenerators++;
                                 //todo: detect burners
                             /*
                             pc.usesFlammableItem = true;
                             pc.rate = 60f / bg.itemDuration;
                              */
                             } else if (t.block() instanceof DecayGenerator dg) {
+                                powerGenerators++;
                                 //todo: detect radioactive reactors
                             /*
                             pc.usesRadioactiveItem = true;
                             pc.rate = 60f / dg.itemDuration;
                              */
                             } else if (t.block() instanceof ItemLiquidGenerator ilg) {
+                                powerGenerators++;
                                 if (ilg.consumes.has(ConsumeType.item) && ilg.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
                                     for (var a : ci.items) {
                                         rb.addIngredient(a.item, a.amount * 60f / ilg.itemDuration);
                                     }
                                 }
                             } else if (t.block() instanceof NuclearReactor nr) {
+                                powerGenerators++;
                                 if (nr.consumes.has(ConsumeType.item) && nr.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
                                     for (var a : ci.items) {
                                         rb.addIngredient(a.item, a.amount * 60f / nr.itemDuration);
                                     }
                                 }
                             } else if (t.block() instanceof ImpactReactor ir) {
+                                powerGenerators++;
                                 if (ir.consumes.has(ConsumeType.item) && ir.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
                                     for (var a : ci.items) {
                                         rb.addIngredient(a.item, a.amount * 60f / ir.itemDuration);
@@ -271,8 +277,8 @@ public class matrixCalculator {
                     }
                 }
                 //make matrix
-                int cs = finalRecipes.size() + placeholders.size() + separatorFixer.size() + 1;
-                float[][] a = new float[objectIndex.size() + (separatorFixer.size() == 0 ? 0 : 1)][cs];
+                int cs = finalRecipes.size() + placeholders.size() + powerGenerators + separatorFixer.size() + 1;
+                float[][] a = new float[objectIndex.size() + (separatorFixer.size() == 0 ? 0 : 1) + powerGenerators][cs];
                 for (int l = 0; l < a.length; l++) {
                     for (int r = 0; r < a[0].length; r++) {
                         a[l][r] = 0f;
@@ -287,8 +293,9 @@ public class matrixCalculator {
                     //get second to last column and keep going back until you finish adding each dummy recipe to fix separator calculation
                     //i = column for dummy recipe
                     a[objectIndex.indexOf(separatorFixer.get(sf))][i] = 1; //make a dummy recipe that makes this
-                    a[a.length - 1][i] = 1; //make a dummy recipe that makes this
+                    a[objectIndex.size()][i] = 1; //make a dummy recipe that makes this
                 }
+                int pgf = 0;
                 //attempt to max out every item not being used but produced
                 for (Object o : output.keySet()) {
                     float val = output.get(o);
@@ -305,6 +312,12 @@ public class matrixCalculator {
                         localIP.putIfAbsent(IPRate.object, new ip());
                         localIP.get(IPRate.object).incrementI(IPRate.rate);
                     });
+                    //fix power sources
+                    if (r.ingredients.length > 0 && r.powerOut > 0) {
+                        int row = a.length - 1 - pgf;
+                        a[row][finalRecipes.size() + placeholders.size() + pgf++] = 1;
+                        a[row][a.length - 1] = 1; //make last row want this recipe to be 100%
+                    }
                     localIP.forEach((k, v) -> a[objectIndex.indexOf(k)][finalRecipes.indexOf(r)] = v.p - v.i);
                 }
 
