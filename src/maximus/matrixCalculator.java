@@ -318,7 +318,12 @@ public class matrixCalculator {
                 }
 
                 //get perfect ratio
-                perfectRatios = matrix.calculate(a);
+                try {
+                    perfectRatios = matrix.calculate(a);
+                } catch (Exception ignored) {
+                    Vars.ui.showInfo(mrc.bundle.getString("calculateReal.failed"));
+                    return new calculationResults(new ArrayList<>(), "");
+                }
                 //get max recipe
                 max = 0f;
                 int maxObject = -1;
