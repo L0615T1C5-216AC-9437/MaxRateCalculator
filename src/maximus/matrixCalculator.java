@@ -47,7 +47,7 @@ public class matrixCalculator {
 
         final ArrayList<Building> processed = new ArrayList<>();
         final HashMap<Block, RecipeBuilder> recipes = new HashMap<>();
-        final ArrayList<Object> separatorFixer = new ArrayList<>();
+        final HashMap<Block, RecipeBuilder> separatorRecipes = new HashMap<>();
         int powerGenerators = 0;
 
         for (int x = xl; x <= xr; x++) {
@@ -55,7 +55,11 @@ public class matrixCalculator {
                 Tile t = world.tile(x, y);
                 if (t == null || t.block().isAir() || t.block() instanceof Prop || processed.contains(t.build)) continue; //ignore if null, decoration or already processed
                 processed.add(t.build);
-                if (!recipes.containsKey(t.block())) {
+                if (recipes.containsKey(t.block())) {
+                    recipes.get(t.block()).addMachine();
+                } else if (separatorRecipes.containsKey(t.block())) {
+                    separatorRecipes.get(t.block()).addMachine();
+                } else {
                     RecipeBuilder rb = new RecipeBuilder();
                     rb.setEmoji(t.block().emoji());
                     //generic
@@ -191,8 +195,6 @@ public class matrixCalculator {
                         for (Item item : chances.keySet()) {
                             //if chances.get(item) / totalSlots == 1.0, it will make x item every crafting cycle, if 0.5 it'll be every other cycle... so on and so forth
                             rb.addProduct(item, (float) chances.get(item) / totalSlots * 60f / separator.craftTime);
-                            //add dummy recipe to fix matrix calculation
-                            separatorFixer.add(item);
                         }
 
                         if (separator.consumes.has(ConsumeType.item) && separator.consumes.get(ConsumeType.item) instanceof ConsumeItems ci) {
@@ -200,6 +202,8 @@ public class matrixCalculator {
                                 rb.addIngredient(a.item, a.amount * 60f / separator.craftTime);
                             }
                         }
+                        separatorRecipes.put(t.block(), rb);
+                        continue;
                     } else if (t.block() instanceof UnitFactory uf && t.build instanceof UnitFactory.UnitFactoryBuild ufb) {
                         if (ufb.currentPlan != -1) {
                             UnitFactory.UnitPlan up = uf.plans.get(ufb.currentPlan);
@@ -221,8 +225,6 @@ public class matrixCalculator {
                     }
 
                     if (!rb.isEmpty()) recipes.put(t.block(), rb);
-                } else {
-                    recipes.get(t.block()).addMachine();
                 }
 
             }
@@ -278,8 +280,8 @@ public class matrixCalculator {
                     }
                 }
                 //make matrix
-                int cs = finalRecipes.size() + placeholders.size() + powerGenerators + separatorFixer.size() + 1;
-                float[][] a = new float[objectIndex.size() + (separatorFixer.size() == 0 ? 0 : 1) + powerGenerators][cs];
+                int cs = finalRecipes.size() + placeholders.size() + powerGenerators + 1;
+                float[][] a = new float[objectIndex.size() + powerGenerators][cs];
                 for (int l = 0; l < a.length; l++) {
                     for (int r = 0; r < a[0].length; r++) {
                         a[l][r] = 0f;
@@ -288,13 +290,6 @@ public class matrixCalculator {
                 //placeholder for objects used as input
                 for (int i = 0; i < placeholders.size(); i++) {
                     a[objectIndex.indexOf(placeholders.get(i))][finalRecipes.size() + i] = 1;
-                }
-                //fix separators
-                for (int i = cs - 2, sf = 0; sf < separatorFixer.size(); sf++, i--) {
-                    //get second to last column and keep going back until you finish adding each dummy recipe to fix separator calculation
-                    //i = column for dummy recipe
-                    a[objectIndex.indexOf(separatorFixer.get(sf))][i] = 1; //make a dummy recipe that makes this
-                    a[objectIndex.size()][i] = 1; //make a dummy recipe that makes this
                 }
                 int pgf = 0;
                 //attempt to max out every item not being used but produced
@@ -391,6 +386,9 @@ public class matrixCalculator {
             for (int i = 0; i < finalRecipes.size(); i++) {
                 finalRecipes.get(i).multiplier = perfectRatios[i];
             }
+        }
+        for (RecipeBuilder rb : separatorRecipes.values()) {
+            finalRecipes.add(rb.build());
         }
 
         return new calculationResults(finalRecipes, parseRecipe(finalRecipes, rateLimit, false));
